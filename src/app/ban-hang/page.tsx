@@ -5,7 +5,7 @@ import SiteLayout from '@/components/layout/SiteLayout';
 import {
   Box, Container, Typography, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, IconButton,
-  Button, Chip, Skeleton, Tooltip, TextField, InputAdornment,
+  Button, Chip, Skeleton, Tooltip, TextField, InputAdornment, Alert,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -57,6 +57,15 @@ export default function SellerProductsPage() {
         router.push('/dang-nhap');
         return;
       }
+    } else {
+      // Force refresh user to get exact latest balance/holdBalance
+      fetch(`/api/me?userId=${user.id}`).then(res => res.json()).then(data => {
+        if (data && data.id) {
+          localStorage.setItem('mmo_user', JSON.stringify(data));
+          // We don't have access to setUser here natively but this updates localStorage
+          // so next refresh it's there. Better: just rely on the layout or trigger it.
+        }
+      });
     }
     fetchData();
   }, [user, router]);
@@ -113,6 +122,34 @@ export default function SellerProductsPage() {
             Đăng sản phẩm mới
           </Button>
         </Box>
+
+        {/* Balance Status */}
+        <Box sx={{ mb: 3, p: 2, borderRadius: 3, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', gap: 4, alignItems: 'center' }}>
+          <Box>
+            <Typography variant="caption" sx={{ color: '#15803d', fontWeight: 600, display: 'block', mb: 0.5 }}>SỐ DƯ KHẢ DỤNG</Typography>
+            <Typography variant="h5" sx={{ color: '#16a34a', fontWeight: 800 }}>{user?.balance?.toLocaleString('vi-VN')} VNĐ</Typography>
+          </Box>
+          <Box sx={{ width: '1px', height: 40, bgcolor: '#bbf7d0' }} />
+          <Box>
+            <Typography variant="caption" sx={{ color: '#b45309', fontWeight: 600, display: 'block', mb: 0.5 }}>TIỀN CHỜ DUYỆT (TẠM GIỮ 3 NGÀY)</Typography>
+            <Typography variant="h5" sx={{ color: '#d97706', fontWeight: 800 }}>
+              {(() => {
+                // Read fresh from localStorage if context is still old
+                if (typeof window !== 'undefined') {
+                   const stored = localStorage.getItem('mmo_user');
+                   if (stored) {
+                     try { return JSON.parse(stored).holdBalance?.toLocaleString('vi-VN') || '0'; } catch {}
+                   }
+                }
+                return user?.holdBalance?.toLocaleString('vi-VN') || '0';
+              })()} VNĐ
+            </Typography>
+          </Box>
+        </Box>
+
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+          Số dư từ các đơn hàng mới sẽ bị tạm giữ 3 ngày hoặc đến khi người mua xác nhận nhận hàng thành công để bảo vệ người dùng!
+        </Alert>
 
         {/* Stats */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 3 }}>

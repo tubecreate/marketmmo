@@ -59,8 +59,8 @@ export async function POST(req: Request) {
     }
 
     // 5. Execute transaction atomically
-    const itemIds = availableItems.map(i => i.id);
-    const deliveredContent = availableItems.map(i => i.content).join('\n');
+    const itemIds = availableItems.map((i: { id: string }) => i.id);
+    const deliveredContent = availableItems.map((i: { content: string }) => i.content).join('\n');
     const warrantyExpire = new Date();
     warrantyExpire.setDate(warrantyExpire.getDate() + (product.warrantyDays || 3));
 
@@ -73,9 +73,10 @@ export async function POST(req: Request) {
           productId,
           amount: totalAmount,
           fee: platformFee,
-          status: 'COMPLETED',
+          status: 'HOLDING', // Temporary hold status
           deliveredContent,
           warrantyExpire,
+          variantName: variant?.name || 'Kho chung',
         },
       }),
       // Mark items as sold
@@ -88,12 +89,11 @@ export async function POST(req: Request) {
         where: { id: buyerId },
         data: { balance: { decrement: totalAmount } },
       }),
-      // Add to seller's balance and revenue
+      // Add to seller's holdBalance (escrow)
       prisma.user.update({
         where: { id: product.sellerId },
         data: {
-          balance: { increment: sellerReceives },
-          totalRevenue: { increment: sellerReceives },
+          holdBalance: { increment: sellerReceives },
         },
       }),
       // Increment product soldCount

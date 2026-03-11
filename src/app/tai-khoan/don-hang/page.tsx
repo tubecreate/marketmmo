@@ -5,12 +5,13 @@ import SiteLayout from '@/components/layout/SiteLayout';
 import {
   Box, Container, Paper, Typography, Button, Chip, Alert,
   TextField, InputAdornment, alpha, Grid, Divider, Select, MenuItem, FormControl,
-  Skeleton,
+  Skeleton, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, IconButton
 } from '@mui/material';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import DownloadIcon from '@mui/icons-material/Download';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -24,10 +25,23 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
 };
 
 interface Order {
-  id: string; amount: number; fee: number; status: string; createdAt: string;
-  deliveredContent: string | null; warrantyExpire: string | null;
-  product: { title: string; slug: string; type: string } | null;
-  seller: { username: string } | null;
+  id: string;
+  amount: number;
+  fee: number;
+  status: string;
+  deliveredContent: string | null;
+  warrantyExpire: Date | null;
+  createdAt: Date;
+  variantName?: string | null;
+  product?: {
+    title: string;
+    slug: string;
+    type: string;
+    thumbnail: string | null;
+  };
+  seller?: {
+    username: string;
+  };
 }
 
 export default function OrdersPage() {
@@ -37,15 +51,50 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  
+  // Dialog State
+  const [viewOrder, setViewOrder] = useState<any>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('mmo_user');
-    if (!stored) { router.push('/dang-nhap'); return; }
-    const u = JSON.parse(stored);
-    fetch(`/api/me/orders?userId=${u.id}`, { cache: 'no-store' })
+  const fetchOrders = () => {
+    fetch(`/api/me/orders?userId=${user?.id}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => { setOrders(Array.isArray(data) ? data : []); setLoading(false); });
-  }, [router]);
+  };
+
+  useEffect(() => {
+    if (!localStorage.getItem('mmo_user')) { router.push('/dang-nhap'); return; }
+    if (user?.id) fetchOrders();
+  }, [router, user?.id]);
+
+  const handleConfirm = async (orderId: string) => {
+    if (!user || !confirm('Xác nhận bạn đã kiểm tra và nhận đủ tài khoản?\nTiền sẽ được cộng cho người bán ngay lập tức!')) return;
+    setConfirmingId(orderId);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyerId: user.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) alert(data.error || 'Lỗi');
+      else fetchOrders(); // Reload list
+    } catch (e) {
+      alert('Network error');
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  const handleDownload = (content: string, orderId: string) => {
+    const element = document.createElement('a');
+    const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    element.href = URL.createObjectURL(file);
+    element.download = `don-hang-${orderId.slice(0, 8)}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
 
   const filtered = orders.filter(o => {
     const matchSearch = !search || o.product?.title?.toLowerCase().includes(search.toLowerCase()) || o.id.includes(search);
@@ -135,8 +184,8 @@ export default function OrdersPage() {
                 <Paper key={order.id} elevation={0} sx={{ p: 2.5, borderRadius: 2.5, border: '1px solid', borderColor: 'divider', '&:hover': { borderColor: '#16a34a' }, transition: 'border-color 0.2s' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
                     <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                        {order.product?.title ?? 'Sản phẩm'}
+                      <Typography variant="body1" sx={{ fontWeight: 700, mb: 0.5, color: '#1e293b' }}>
+                        {order.product?.title ?? 'Sản phẩm'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                         Mã đơn: #{order.id.slice(0, 8)} · Người bán: @{order.seller?.username ?? 'n/a'} · {new Date(order.createdAt).toLocaleDateString('vi-VN')}
@@ -149,17 +198,38 @@ export default function OrdersPage() {
                       </Typography>
                     </Box>
                   </Box>
-                  {order.deliveredContent && (
-                    <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 1.5, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>📦 Nội dung đã giao:</Typography>
-                      <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.78rem', wordBreak: 'break-all' }}>{order.deliveredContent}</Typography>
+                  
+                  {/* Order Actions & Content Snippet */}
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      {order.status === 'HOLDING' && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          disabled={confirmingId === order.id}
+                          onClick={() => handleConfirm(order.id)}
+                          sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700 }}
+                        >
+                          {confirmingId === order.id ? 'Đang xử lý...' : 'Xác nhận nhận hàng'}
+                        </Button>
+                      )}
+                      {(order.status === 'HOLDING' || order.status === 'COMPLETED') && (
+                        <Button size="small" variant="outlined" color="error" sx={{ borderRadius: 1.5, fontSize: '0.75rem' }}>Khiếu nại</Button>
+                      )}
                     </Box>
-                  )}
-                  {order.status === 'HOLDING' && (
-                    <Box sx={{ mt: 1.5, display: 'flex', gap: 1 }}>
-                      <Button size="small" variant="outlined" color="error" sx={{ borderRadius: 1.5, fontSize: '0.75rem' }}>Khiếu nại</Button>
-                    </Box>
-                  )}
+                    
+                    {order.deliveredContent && (
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        onClick={() => setViewOrder(order)}
+                        sx={{ borderRadius: 2, fontSize: '0.8rem', fontWeight: 600 }}
+                      >
+                        Nội dung đã giao
+                      </Button>
+                    )}
+                  </Box>
                 </Paper>
               );
             })}
@@ -170,6 +240,42 @@ export default function OrdersPage() {
           ⚠️ Cấm tuyệt đối dùng tài khoản mua từ web vào mục đích vi phạm pháp luật. Nếu vi phạm, bạn phải chịu trách nhiệm hoàn toàn!
         </Alert>
       </Container>
+      
+      {/* View Delivery Dialog */}
+      <Dialog open={!!viewOrder} onClose={() => setViewOrder(null)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Chi tiết nội dung giao hàng
+          {viewOrder?.deliveredContent && (
+            <Button
+              size="small"
+              variant="contained"
+              color="success"
+              disableElevation
+              startIcon={<DownloadIcon />}
+              onClick={() => handleDownload(viewOrder.deliveredContent, viewOrder.id)}
+              sx={{ borderRadius: 2 }}
+            >
+              Tải TXT
+            </Button>
+          )}
+        </DialogTitle>
+        <DialogContent dividers sx={{ bgcolor: '#f8fafc', p: 2 }}>
+          {viewOrder && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>{viewOrder.product?.title}</Typography>
+              <Typography variant="caption" color="text.secondary">Mã đơn: #{viewOrder.id}</Typography>
+              <Box sx={{ mt: 2, p: 2, bgcolor: '#fff', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                  {viewOrder.deliveredContent}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button onClick={() => setViewOrder(null)} sx={{ borderRadius: 2, fontWeight: 600 }}>Đóng</Button>
+        </DialogActions>
+      </Dialog>
     </SiteLayout>
   );
 }

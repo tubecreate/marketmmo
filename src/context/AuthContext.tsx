@@ -7,6 +7,7 @@ interface AuthUser {
   email: string;
   fullName: string | null;
   balance: number;
+  holdBalance: number;
   role: string;
   level: number;
   telegramId: string | null;
@@ -44,13 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = async () => {
     const stored = localStorage.getItem('mmo_user');
     if (!stored) return;
-    const u = JSON.parse(stored) as AuthUser;
-    const res = await fetch(`/api/me?userId=${u.id}`);
-    if (res.ok) {
-      const fresh = await res.json();
-      setUser(fresh);
-      localStorage.setItem('mmo_user', JSON.stringify(fresh));
-    }
+    try {
+      const u = JSON.parse(stored) as AuthUser;
+      const res = await fetch(`/api/me?userId=${u.id}`);
+      if (res.ok) {
+        const fresh = await res.json();
+        setUser(fresh);
+        localStorage.setItem('mmo_user', JSON.stringify(fresh));
+      }
+    } catch (e) { console.error('Lỗi lấy info user mới:', e); }
   };
 
   const login = async (identifier: string, password: string) => {

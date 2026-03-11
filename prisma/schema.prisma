@@ -15,6 +15,7 @@ model User {
   email         String    @unique
   passwordHash  String
   balance       Float     @default(0)
+  holdBalance   Float     @default(0) // Số dư đang bị tạm giữ (escrow)
   role          String    @default("BUYER") // BUYER, SELLER, ADMIN
   telegramId    String?
   twoFactorSecret String?
@@ -114,6 +115,7 @@ model Order {
   seller          User      @relation("SellerOrders", fields: [sellerId], references: [id])
   productId       String
   product         Product   @relation(fields: [productId], references: [id])
+  variantName     String?   // Tên biến thể đã mua (vd: Kênh Bật Kiếm Tiền)
   amount          Float
   fee             Float     @default(0)
   status          String    @default("PENDING") // PENDING, HOLDING, COMPLETED, DISPUTED, REFUNDED
