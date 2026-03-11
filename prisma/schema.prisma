@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String
+  balance       Float     @default(0)
+  role          String    @default("BUYER") // BUYER, SELLER, ADMIN
+  telegramId    String?
+  twoFactorSecret String?
+  twoFactorEnabled Boolean @default(false)
+  level         Int       @default(0)
+  totalRevenue  Float     @default(0)
+  isActive      Boolean   @default(true)
+  avatar        String?
+  fullName      String?
+  phone         String?
+  bankAccount   String?
+  bankName      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  products      Product[]
+  buyerOrders   Order[]   @relation("BuyerOrders")
+  sellerOrders  Order[]   @relation("SellerOrders")
+  transactions  Transaction[]
+  chatLogs      ChatLog[]
+  coupons       Coupon[]
+  affiliateLinks AffiliateLink[]
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  icon        String?
+  parentId    String?
+  parent      Category? @relation("SubCategories", fields: [parentId], references: [id])
+  children    Category[] @relation("SubCategories")
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  sellerId    String
+  seller      User      @relation(fields: [sellerId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  title       String
+  slug        String    @unique
+  description String
+  type        String    // DIGITAL, SERVICE
+  price       Float
+  priceMax    Float?    // for range pricing
+  thumbnail   String?
+  status      String    @default("PENDING") // PENDING, ACTIVE, PAUSED, REJECTED
+  isFeatured  Boolean   @default(false)
+  isSponsored Boolean   @default(false)
+  viewCount   Int       @default(0)
+  soldCount   Int       @default(0)
+  rating      Float     @default(0)
+  warrantyDays Int      @default(3) // 3 days for digital, 7 for service
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items       ProductItem[]
+  orders      Order[]
+  reviews     Review[]
+}
+
+model ProductItem {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  content     String    // the actual digital content (key, account, etc.)
+  isSold      Boolean   @default(false)
+  soldAt      DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Order {
+  id              String    @id @default(cuid())
+  buyerId         String
+  buyer           User      @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User      @relation("SellerOrders", fields: [sellerId], references: [id])
+  productId       String
+  product         Product   @relation(fields: [productId], references: [id])
+  amount          Float
+  fee             Float     @default(0)
+  status          String    @default("PENDING") // PENDING, HOLDING, COMPLETED, DISPUTED, REFUNDED
+  deliveredContent String?
+  warrantyExpire  DateTime?
+  couponCode      String?
+  discountAmount  Float     @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  dispute         Dispute?
+  review          Review?
+}
+
+model Dispute {
+  id            String    @id @default(cuid())
+  orderId       String    @unique
+  order         Order     @relation(fields: [orderId], references: [id])
+  reason        String
+  evidence      String?
+  status        String    @default("OPEN") // OPEN, RESOLVED, CLOSED
+  adminDecision String?
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model Transaction {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  amount      Float
+  type        String    // DEPOSIT, WITHDRAW, PURCHASE, REFUND, FEE
+  status      String    @default("PENDING") // PENDING, SUCCESS, FAILED
+  gatewayRef  String?
+  description String?
+  createdAt   DateTime  @default(now())
+}
+
+model Review {
+  id        String    @id @default(cuid())
+  orderId   String    @unique
+  order     Order     @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product   @relation(fields: [productId], references: [id])
+  rating    Int       // 1-5
+  comment   String?
+  createdAt DateTime  @default(now())
+}
+
+model Coupon {
+  id            String    @id @default(cuid())
+  sellerId      String
+  seller        User      @relation(fields: [sellerId], references: [id])
+  code          String    @unique
+  discountType  String    // PERCENT, FIXED
+  discountValue Float
+  usageLimit    Int?
+  usageCount    Int       @default(0)
+  expiresAt     DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+}
+
+model AffiliateLink {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  code            String    @unique
+  commissionRate  Float     @default(5)
+  totalEarned     Float     @default(0)
+  clickCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+}
+
+model ChatLog {
+  id            String    @id @default(cuid())
+  sessionId     String
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  message       String
+  aiResponse    String
+  contextSummary String?
+  createdAt     DateTime  @default(now())
+}
+
+model Banner {
+  id          String    @id @default(cuid())
+  imageUrl    String
+  linkUrl     String?
+  title       String?
+  isActive    Boolean   @default(true)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+}
+
+model Announcement {
+  id        String    @id @default(cuid())
+  message   String
+  isActive  Boolean   @default(true)
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+}
