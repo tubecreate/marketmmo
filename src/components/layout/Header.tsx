@@ -19,9 +19,10 @@ import AddCardIcon from '@mui/icons-material/AddCard';
 import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
 import KeyIcon from '@mui/icons-material/Key';
 
-const mockUser = null;
+import { useAuth } from '@/context/AuthContext';
 
 export default function Header() {
+  const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -83,6 +84,13 @@ export default function Header() {
 
           {/* Search Bar */}
           <Box
+            component="form"
+            onSubmit={(e: React.FormEvent) => {
+              e.preventDefault();
+              if (searchQuery.trim()) {
+                window.location.href = `/tim-kiem?q=${encodeURIComponent(searchQuery)}`;
+              }
+            }}
             sx={{
               flex: 1,
               maxWidth: 600,
@@ -110,6 +118,7 @@ export default function Header() {
               sx={{ flex: 1, fontSize: '0.875rem', color: 'text.primary' }}
             />
             <Button
+              type="submit"
               variant="contained"
               disableElevation
               sx={{
@@ -129,7 +138,7 @@ export default function Header() {
 
           {/* Right side */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0, ml: 'auto' }}>
-            {mockUser ? (
+            {user ? (
               <>
                 <Tooltip title="Chat">
                   <IconButton size="medium" sx={{ color: '#475569' }}>
@@ -170,7 +179,7 @@ export default function Header() {
                 >
                   <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 18, color: '#16a34a' }} />
                   <Typography sx={{ fontWeight: 700, color: '#16a34a', fontSize: '0.85rem' }}>
-                    125,000đ
+                    {user.balance.toLocaleString('vi-VN')}đ
                   </Typography>
                 </Box>
 
@@ -189,7 +198,7 @@ export default function Header() {
                       border: '2px solid #22c55e',
                     }}
                   >
-                    U
+                    {user.username[0].toUpperCase()}
                   </Avatar>
                 </Box>
 
@@ -211,16 +220,16 @@ export default function Header() {
                   anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                 >
                   <Box sx={{ px: 2.5, py: 1.5 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Username</Typography>
-                    <Typography variant="caption" color="text.secondary">user@email.com</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{user.username}</Typography>
+                    <Typography variant="caption" color="text.secondary">{user.email}</Typography>
                     <Box sx={{ mt: 0.75, px: 1.5, py: 0.5, bgcolor: '#f0fdf4', borderRadius: 1.5 }}>
-                      <Typography sx={{ fontWeight: 800, color: '#16a34a', fontSize: '0.9rem' }}>125,000đ</Typography>
+                      <Typography sx={{ fontWeight: 800, color: '#16a34a', fontSize: '0.9rem' }}>{user.balance.toLocaleString('vi-VN')}đ</Typography>
                     </Box>
                   </Box>
                   <Divider />
                   {[
                     { icon: <PersonOutlineIcon fontSize="small" />, label: 'Tài khoản', href: '/tai-khoan' },
-                    { icon: <HistoryIcon fontSize="small" />, label: 'Lịch sử mua', href: '/tai-khoan/don-hang' },
+                    { icon: <HistoryIcon fontSize="small" />, label: 'Đơn hàng đã mua', href: '/tai-khoan/don-hang' },
                     { icon: <AddCardIcon fontSize="small" />, label: 'Nạp tiền', href: '/tai-khoan/nap-tien' },
                     { icon: <KeyIcon fontSize="small" />, label: 'Lấy 2FA', href: '/tai-khoan/lay-2fa' },
                     { icon: <MonetizationOnOutlinedIcon fontSize="small" />, label: 'Kiếm tiền', href: '/tai-khoan/kiem-tien' },
@@ -248,7 +257,7 @@ export default function Header() {
                   </MenuItem>
                   <Divider />
                   <MenuItem
-                    onClick={() => setAnchorEl(null)}
+                    onClick={() => { setAnchorEl(null); logout(); }}
                     sx={{ gap: 1.5, py: 1, color: '#dc2626', fontSize: '0.875rem' }}
                   >
                     <LogoutIcon fontSize="small" /> Đăng xuất

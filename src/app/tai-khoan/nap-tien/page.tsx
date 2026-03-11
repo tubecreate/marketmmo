@@ -11,19 +11,28 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const quickAmounts = [10000, 20000, 50000, 100000, 200000, 500000];
 
 export default function NapTienPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem('mmo_user');
+    if (!stored) router.push('/dang-nhap');
+  }, [router]);
 
   const selectedAmount = Number(amount.replace(/\D/g, ''));
   const bankInfo = {
     bank: 'MB Bank (MBBank)',
     accountNumber: '1234567890',
     accountName: 'MARKETMMO PLATFORM',
-    content: `NAP ${selectedAmount || '100000'} USERID123`,
+    content: `NAP ${selectedAmount || '10000'} ${user?.username?.toUpperCase() || ''}`,
   };
 
   const handleCopy = (text: string, key: string) => {
@@ -60,7 +69,7 @@ export default function NapTienPage() {
           </Box>
           <Box sx={{ ml: 'auto', textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
             <Typography variant="caption" sx={{ opacity: 0.8 }}>Số dư hiện tại</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>0 VNĐ</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>{(user?.balance || 0).toLocaleString('vi-VN')} VNĐ</Typography>
           </Box>
         </Box>
 

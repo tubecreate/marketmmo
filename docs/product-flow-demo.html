@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarketMMO – Mô hình kho hàng số theo biến thể</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    .hero { text-align: center; padding: 50px 20px 20px; }
+    .hero h1 { font-size: 1.75rem; font-weight: 800; color: #f8fafc; }
+    .hero .sub { color: #94a3b8; margin-top: 8px; font-size: 0.9rem; }
+
+    .tabs { display: flex; justify-content: center; gap: 8px; padding: 16px; }
+    .tab { padding: 9px 22px; border-radius: 999px; cursor: pointer; font-weight: 700; border: 2px solid transparent; transition: all 0.2s; font-size: 0.875rem; }
+    .tab.seller { background: #1e3a5f; color: #60a5fa; border-color: #2563eb; }
+    .tab.buyer { background: #1a3a2a; color: #4ade80; border-color: #16a34a; }
+    .tab.logic { background: #2d1f3a; color: #c084fc; border-color: #7c3aed; }
+    .tab.active.seller { background: #2563eb; color: white; }
+    .tab.active.buyer { background: #16a34a; color: white; }
+    .tab.active.logic { background: #7c3aed; color: white; }
+
+    .view { display: none; max-width: 1000px; margin: 0 auto; padding: 0 20px 60px; }
+    .view.active { display: block; }
+
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+    .step-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.875rem; flex-shrink: 0; }
+
+    input[type=text], input[type=number], textarea, select {
+      background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
+      padding: 9px 13px; border-radius: 10px; font-size: 0.875rem; font-family: 'Inter', sans-serif; width: 100%;
+    }
+    textarea { resize: vertical; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: #3b82f6; }
+    .btn { padding: 9px 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 0.875rem; transition: all 0.15s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-green { background: #16a34a; color: white; }
+    .btn-green:hover { background: #15803d; }
+    .btn-red { background: #dc2626; color: white; }
+    .btn-orange { background: #f59e0b; color: #1a1000; }
+
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; }
+    .tag-blue { background: #1d4ed820; color: #60a5fa; border: 1px solid #2563eb40; }
+    .tag-green { background: #15803d20; color: #4ade80; border: 1px solid #16a34a40; }
+    .tag-yellow { background: #92400e20; color: #fbbf24; border: 1px solid #d9770640; }
+    .tag-red { background: #450a0a20; color: #f87171; border: 1px solid #dc262640; }
+    .tag-purple { background: #3b0764; color: #c084fc; border: 1px solid #7c3aed40; }
+    .tag-gray { background: #1e293b; color: #64748b; border: 1px solid #33415540; }
+
+    /* ====== LOGIC VIEW ====== */
+    .variant-pools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .pool { background: #0f172a; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
+    .pool-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .pool-title { font-weight: 700; font-size: 0.9rem; }
+    .pool-count { font-size: 0.75rem; color: #64748b; }
+    .item-grid { display: flex; flex-wrap: wrap; gap: 4px; min-height: 60px; }
+    .item-dot { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; cursor: default; transition: all 0.3s; }
+    .item-dot.avail { background: #15803d40; color: #4ade80; border: 1px solid #16a34a40; }
+    .item-dot.sold { background: #7f1d1d40; color: #f87171; border: 1px solid #dc262640; text-decoration: line-through; }
+    .item-dot.selected { background: #f59e0b80; color: #fef3c7; border: 1px solid #f59e0b; transform: scale(1.2); }
+
+    .buy-controls { background: #0f172a; border: 1px solid #334155; border-radius: 14px; padding: 20px; margin-bottom: 20px; }
+    .buy-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .buy-row label { font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600; }
+    .buy-row select, .buy-row input[type=number] { width: auto; min-width: 140px; }
+
+    .log-box { background: #030712; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; font-family: monospace; font-size: 0.78rem; max-height: 240px; overflow-y: auto; }
+    .log-line { padding: 3px 0; border-bottom: 1px solid #0f172a; }
+    .log-line:last-child { border-bottom: none; font-weight: 700; }
+    .log-green { color: #4ade80; }
+    .log-yellow { color: #fbbf24; }
+    .log-red { color: #f87171; }
+    .log-blue { color: #60a5fa; }
+    .log-gray { color: #64748b; }
+
+    .receipt { background: #052e16; border: 2px solid #16a34a; border-radius: 14px; padding: 20px; display: none; }
+    .receipt.show { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .acc-line { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-family: monospace; font-size: 0.8rem; color: #86efac; border-bottom: 1px dashed #1a3a1a; }
+    .acc-line:last-child { border: none; }
+
+    /* ====== SELLER VIEW ====== */
+    .variant-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .variant-col1 { flex: 1; }
+    .variant-col2 { width: 110px; }
+    .variant-col3 { width: 70px; text-align: center; font-weight: 700; font-size: 1.1rem; }
+
+    /* ====== BUYER VIEW ====== */
+    .product-card { background: #1e293b; border-radius: 16px; border: 1px solid #334155; overflow: hidden; }
+    .product-img { height: 180px; background: linear-gradient(135deg, #1e3a5f, #0f172a); display: flex; align-items: center; justify-content: center; font-size: 3.5rem; }
+    .variant-option { padding: 12px 16px; border: 2px solid #334155; border-radius: 10px; cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
+    .variant-option:hover { border-color: #3b82f6; }
+    .variant-option.selected { border-color: #f59e0b; background: #1a1000; }
+    .qty-row { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+    .qty-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .qty-num { width: 56px; text-align: center; font-weight: 700; }
+
+    @media (max-width: 640px) {
+      .variant-pools { grid-template-columns: 1fr; }
+      .buy-row { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>📦 Mô hình Kho Hàng Số theo Biến thể – MarketMMO</h1>
+  <p class="sub">Mô phỏng cách quản lý, nhập kho và giao hàng tự động theo từng gói sản phẩm</p>
+</div>
+
+<div class="tabs">
+  <button class="tab seller active" onclick="switchView('seller')">🏪 Người bán nhập kho</button>
+  <button class="tab buyer" onclick="switchView('buyer')">🛒 Khách mua hàng</button>
+  <button class="tab logic active" onclick="switchView('logic')" id="logic-tab">⚙️ Cơ chế hoạt động</button>
+</div>
+
+<!-- ======== LOGIC VIEW (default) ======== -->
+<div class="view active" id="view-logic">
+  <div class="card">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+      <div class="step-badge" style="background:#7c3aed; color:white;">⚙</div>
+      <div>
+        <div style="font-weight:800; font-size:1rem; color:#f1f5f9;">Cơ chế quản lý kho theo biến thể (Variant)</div>
+        <div style="font-size:0.8rem; color:#94a3b8;">Mỗi biến thể có pool kho riêng biệt. Khi khách mua, hệ thống lấy FIFO (First In First Out) từ pool đúng biến thể.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pool Visual -->
+  <div class="variant-pools" id="pools">
+    <!-- Rendered by JS -->
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; font-size:0.75rem; color:#94a3b8;">
+    <span>🟢 Còn lại (chưa bán)</span>
+    <span>🔴 Đã bán (isSold=true)</span>
+    <span>🟡 Đang được chọn (buy preview)</span>
+  </div>
+
+  <!-- Buy Control -->
+  <div class="buy-controls">
+    <div style="font-weight:700; margin-bottom:14px; font-size:0.9rem; color:#f1f5f9;">🛒 Mô phỏng Khách đặt hàng</div>
+    <div class="buy-row">
+      <div>
+        <label>Chọn biến thể</label>
+        <select id="variantSelect">
+          <option value="0">Gmail 2009-2015 (Cổ) – 49.000đ</option>
+          <option value="1">Gmail 2016-2020 (TBình) – 29.000đ</option>
+          <option value="2">Gmail mới đăng ký – 9.000đ</option>
+        </select>
+      </div>
+      <div>
+        <label>Số lượng mua</label>
+        <input type="number" id="buyQty" value="5" min="1" max="50" style="width:90px" oninput="previewBuy()" />
+      </div>
+      <div style="align-self:flex-end">
+        <button class="btn btn-orange" onclick="previewBuy()">👁 Preview</button>
+      </div>
+      <div style="align-self:flex-end">
+        <button class="btn btn-green" id="confirmBtn" onclick="confirmBuy()" disabled>✅ Xác nhận mua</button>
+      </div>
+      <div style="align-self:flex-end">
+        <button class="btn" style="background:#334155; color:#e2e8f0;" onclick="resetAll()">↺ Reset</button>
+      </div>
+    </div>
+    <div id="preview-msg" style="margin-top:10px; font-size:0.8rem; color:#fbbf24;"></div>
+  </div>
+
+  <!-- Transaction Log -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-weight:700; margin-bottom:10px; font-size:0.875rem;">📋 Transaction Log (Hệ thống)</div>
+    <div class="log-box" id="logBox">
+      <div class="log-line log-gray">-- Chưa có giao dịch nào --</div>
+    </div>
+  </div>
+
+  <!-- Receipt -->
+  <div class="receipt" id="receipt">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+      <span style="font-size:2rem;">✅</span>
+      <div>
+        <div style="font-weight:800; color:#4ade80; font-size:1rem;">Đơn hàng thành công!</div>
+        <div id="receipt-meta" style="color:#86efac; font-size:0.8rem;"></div>
+      </div>
+    </div>
+    <div style="font-size:0.8rem; font-weight:700; color:#86efac; margin-bottom:8px;">📬 Nội dung giao cho khách:</div>
+    <div id="receipt-items" style="background:#0a1f0a; border-radius:8px; padding:12px;"></div>
+    <div style="margin-top:10px; font-size:0.75rem; color:#4a6a4a;">⚠ Các dòng trên đã bị đánh dấu isSold=true trong database. Không ai mua lại được.</div>
+  </div>
+</div>
+
+<!-- ======== SELLER VIEW ======== -->
+<div class="view" id="view-seller">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div class="step-badge" style="background:#2563eb; color:white;">1</div>
+      <div style="font-weight:700;">Tạo sản phẩm + Biến thể</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+      <input type="text" value="Tài khoản Gmail cổ – Hàng Auth" readonly placeholder="Tên sản phẩm" />
+      <input type="text" value="Sản phẩm số (DIGITAL)" readonly />
+    </div>
+    <div style="font-size:0.75rem; font-weight:700; color:#64748b; margin-bottom:10px; text-transform:uppercase; letter-spacing:.08em;">Biến thể & Giá</div>
+    <div style="display:grid; grid-template-columns:1fr 100px 80px; gap:8px; margin-bottom:8px; font-size:0.75rem; color:#64748b; font-weight:700;">
+      <div>Tên gói</div><div>Giá (đ)</div><div>Kho</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 100px 80px; gap:8px; margin-bottom:8px;">
+      <input type="text" value="Gmail 2009-2015 (Cổ)" readonly />
+      <input type="text" value="49.000" readonly />
+      <span class="tag tag-blue" style="white-space:nowrap; text-align:center; display:flex; align-items:center; justify-content:center;">50 acc</span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 100px 80px; gap:8px; margin-bottom:8px;">
+      <input type="text" value="Gmail 2016-2020 (TBình)" readonly />
+      <input type="text" value="29.000" readonly />
+      <span class="tag tag-green" style="display:flex;align-items:center;justify-content:center;">30 acc</span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 100px 80px; gap:8px; margin-bottom:8px;">
+      <input type="text" value="Gmail mới đăng ký" readonly />
+      <input type="text" value="9.000" readonly />
+      <span class="tag tag-yellow" style="display:flex;align-items:center;justify-content:center;">10 acc</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div class="step-badge" style="background:#16a34a; color:white;">2</div>
+      <div style="font-weight:700;">Nhập kho – Mỗi biến thể có pool riêng</div>
+    </div>
+    <div style="background:#1e3a5f20; border:1px solid #2563eb40; border-radius:10px; padding:12px; margin-bottom:14px; font-size:0.82rem; color:#93c5fd;">
+      💡 Mỗi dòng trong kho được lưu thành 1 record <code style="background:#0f172a;padding:1px 6px;border-radius:4px;">ProductItem</code> với trường <code>variantId</code> = ID biến thể và <code>isSold = false</code>. Không có password thô nào lưu ngoài database.
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;">
+      <div>
+        <div class="tag tag-blue" style="margin-bottom:8px;">Gmail 2009-2015 · 50 acc</div>
+        <textarea readonly rows="5" style="font-size:0.75rem;">user2009a@gmail.com|P@ss1|TOTP1
+user2010b@gmail.com|P@ss2|TOTP2
+user2011c@gmail.com|P@ss3|TOTP3
+... (50 dòng)</textarea>
+      </div>
+      <div>
+        <div class="tag tag-green" style="margin-bottom:8px;">Gmail 2016-2020 · 30 acc</div>
+        <textarea readonly rows="5" style="font-size:0.75rem;">user2016a@gmail.com|Q@ss4|TOTP4
+user2017b@gmail.com|Q@ss5|TOTP5
+... (30 dòng)</textarea>
+      </div>
+      <div>
+        <div class="tag tag-yellow" style="margin-bottom:8px;">Gmail mới · 10 acc</div>
+        <textarea readonly rows="5" style="font-size:0.75rem;">newuser01@gmail.com|R@ss6|
+newuser02@gmail.com|R@ss7|
+... (10 dòng)</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <div class="step-badge" style="background:#c2410c; color:white;">3</div>
+      <div style="font-weight:700;">Database – ProductItem Table</div>
+    </div>
+    <div style="background:#030712; border-radius:10px; overflow:auto; padding:14px; font-family:monospace; font-size:0.78rem;">
+      <div style="color:#64748b; margin-bottom:6px;">── ProductItem table (mỗi dòng = 1 account trong kho) ──</div>
+      <div style="display:grid; grid-template-columns:140px 160px 100px 70px 80px; gap:8px; color:#94a3b8; font-size:0.7rem; font-weight:700; border-bottom:1px solid #1e293b; padding-bottom:6px; margin-bottom:6px;">
+        <div>id</div><div>variantId</div><div>productId</div><div>isSold</div><div>soldAt</div>
+      </div>
+      <div style="display:grid; grid-template-columns:140px 160px 100px 70px 80px; gap:8px; margin-bottom:4px; color:#e2e8f0;">
+        <div class="tag tag-gray">item_abc001</div><div class="tag tag-blue">var_2009_2015</div><div style="color:#475569">prod_...</div><div class="tag tag-green">false</div><div style="color:#475569">null</div>
+      </div>
+      <div style="display:grid; grid-template-columns:140px 160px 100px 70px 80px; gap:8px; margin-bottom:4px;">
+        <div class="tag tag-gray">item_abc002</div><div class="tag tag-blue">var_2009_2015</div><div style="color:#475569">prod_...</div><div class="tag tag-red">true</div><div style="color:#94a3b8; font-size:0.7rem">2024-03-10</div>
+      </div>
+      <div style="display:grid; grid-template-columns:140px 160px 100px 70px 80px; gap:8px; margin-bottom:4px;">
+        <div class="tag tag-gray">item_xyz010</div><div class="tag tag-green">var_2016_2020</div><div style="color:#475569">prod_...</div><div class="tag tag-green">false</div><div style="color:#475569">null</div>
+      </div>
+      <div style="color:#475569; padding-top:8px; font-size:0.72rem;">... và 87 record khác</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== BUYER VIEW ======== -->
+<div class="view" id="view-buyer">
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <div class="product-card">
+      <div class="product-img">📧</div>
+      <div style="padding:20px;">
+        <div style="font-size:1.1rem; font-weight:800; margin-bottom:6px;">Tài khoản Gmail cổ</div>
+        <div style="font-size:0.8rem; margin-bottom:16px; display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="tag tag-blue">Digital</span>
+          <span class="tag tag-green">90 items</span>
+          <span style="color:#64748b; font-size:0.75rem;">Đã bán: 10</span>
+        </div>
+
+        <div style="font-size:0.8rem; font-weight:700; color:#94a3b8; margin-bottom:8px;">CHỌN GÓI:</div>
+        <div class="variant-option selected" id="bopt0" onclick="bSelectVariant(0, 49000, 50, 'Gmail 2009-2015 (Cổ)')">
+          <div style="font-weight:700; font-size:0.9rem;">📅 Gmail 2009-2015 (Cổ)</div>
+          <div style="font-size:0.78rem; color:#64748b; margin-top:3px; display:flex; gap:14px;">
+            <span style="color:#f87171; font-weight:800;">49.000đ</span>
+            <span style="color:#4ade80;">● 50 còn lại</span>
+          </div>
+        </div>
+        <div class="variant-option" id="bopt1" onclick="bSelectVariant(1, 29000, 30, 'Gmail 2016-2020 (TBình)')">
+          <div style="font-weight:700; font-size:0.9rem;">📅 Gmail 2016-2020 (TBình)</div>
+          <div style="font-size:0.78rem; color:#64748b; margin-top:3px; display:flex; gap:14px;">
+            <span style="color:#f87171; font-weight:800;">29.000đ</span>
+            <span style="color:#4ade80;">● 30 còn lại</span>
+          </div>
+        </div>
+        <div class="variant-option" id="bopt2" onclick="bSelectVariant(2, 9000, 10, 'Gmail mới')">
+          <div style="font-weight:700; font-size:0.9rem;">🆕 Gmail mới đăng ký</div>
+          <div style="font-size:0.78rem; color:#64748b; margin-top:3px; display:flex; gap:14px;">
+            <span style="color:#f87171; font-weight:800;">9.000đ</span>
+            <span style="color:#4ade80;">● 10 còn lại</span>
+          </div>
+        </div>
+
+        <div class="qty-row">
+          <button class="qty-btn" onclick="bChangeQty(-1)">−</button>
+          <input type="number" class="qty-num" id="bqty" value="5" min="1" max="50" style="text-align:center;width:54px" />
+          <button class="qty-btn" onclick="bChangeQty(1)">+</button>
+          <span id="btotal" style="font-weight:800; color:#f87171;">245.000đ</span>
+        </div>
+        <button style="width:100%;padding:14px;border-radius:10px;border:none;background:#f59e0b;color:#78350f;font-size:1rem;font-weight:800;cursor:pointer;" onclick="bBuy()">🛒 MUA NGAY</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:14px;">
+        <div style="font-weight:800; margin-bottom:10px; color:#f1f5f9;">Luồng xử lý khi mua</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:0.82rem;">
+          <div style="display:flex;gap:8px;background:#0f172a;padding:10px;border-radius:8px;">
+            <span>1️⃣</span><span>Hệ thống nhận <strong style="color:#60a5fa">variantId + qty</strong> từ request</span>
+          </div>
+          <div style="display:flex;gap:8px;background:#0f172a;padding:10px;border-radius:8px;">
+            <span>2️⃣</span><span>Query <code style="color:#fbbf24">SELECT TOP qty FROM ProductItem WHERE variantId=? AND isSold=false ORDER BY createdAt ASC</code> (FIFO)</span>
+          </div>
+          <div style="display:flex;gap:8px;background:#0f172a;padding:10px;border-radius:8px;">
+            <span>3️⃣</span><span>Đánh dấu <strong style="color:#f87171">isSold=true, soldAt=NOW()</strong> cho qty items đó</span>
+          </div>
+          <div style="display:flex;gap:8px;background:#0f172a;padding:10px;border-radius:8px;">
+            <span>4️⃣</span><span>Tạo Order + trừ tiền ví → cộng cho seller</span>
+          </div>
+          <div style="display:flex;gap:8px;background:#0f172a;padding:10px;border-radius:8px;">
+            <span>5️⃣</span><span>Trả về nội dung <strong style="color:#4ade80">ngay trên màn hình</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="buyer-receipt" class="receipt">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <span style="font-size:1.75rem;">✅</span>
+          <div>
+            <div style="font-weight:800; color:#4ade80;">Đơn hàng thành công!</div>
+            <div id="buyer-receipt-meta" style="color:#86efac;font-size:0.78rem;"></div>
+          </div>
+        </div>
+        <div style="font-size:0.78rem; color:#86efac; font-weight:700; margin-bottom:6px;">📬 Tài khoản nhận được:</div>
+        <div id="buyer-receipt-items" style="background:#0a1f0a; border-radius:8px; padding:12px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // === State ===
+  const DEMO_ACCOUNTS = [
+    [ // Variant 0: 2009-2015
+      ...Array.from({length:50}, (_, i) => `user${2009+Math.floor(i/6)}${String.fromCharCode(97+i%6)}@gmail.com|P@ss${i+1}|TOTP${i+1}`)
+    ],
+    [ // Variant 1: 2016-2020
+      ...Array.from({length:30}, (_, i) => `user${2016+Math.floor(i/6)}${String.fromCharCode(97+i%6)}@gmail.com|Q@ss${i+1}|TOTP${i+51}`)
+    ],
+    [ // Variant 2: new
+      ...Array.from({length:10}, (_, i) => `newuser${String(i+1).padStart(2,'0')}@gmail.com|R@ss${i+1}|`)
+    ]
+  ];
+  const VARIANT_NAMES = ['Gmail 2009-2015 (Cổ)','Gmail 2016-2020 (TBình)','Gmail mới'];
+  const VARIANT_PRICES = [49000, 29000, 9000];
+  let pools = [
+    DEMO_ACCOUNTS[0].map((c,i) => ({ id: i+1, content: c, sold: false, selected: false })),
+    DEMO_ACCOUNTS[1].map((c,i) => ({ id: i+51, content: c, sold: false, selected: false })),
+    DEMO_ACCOUNTS[2].map((c,i) => ({ id: i+81, content: c, sold: false, selected: false })),
+  ];
+  let logLines = [];
+  let pendingPurchase = null;
+
+  function switchView(v) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + v).classList.add('active');
+    document.querySelector('.tab.' + v).classList.add('active');
+  }
+
+  function renderPools() {
+    const container = document.getElementById('pools');
+    const colors = ['tag-blue','tag-green','tag-yellow'];
+    container.innerHTML = VARIANT_NAMES.map((name, vi) => {
+      const pool = pools[vi];
+      const avail = pool.filter(i => !i.sold).length;
+      const sold = pool.filter(i => i.sold).length;
+      const dots = pool.map(item => {
+        const cls = item.sold ? 'sold' : item.selected ? 'selected' : 'avail';
+        const title = item.content.split('|')[0];
+        return `<div class="item-dot ${cls}" title="${title}">${item.id}</div>`;
+      }).join('');
+      return `<div class="pool">
+        <div class="pool-header">
+          <div class="pool-title"><span class="tag ${colors[vi]}">${name.substring(0,12)}..</span></div>
+          <div class="pool-count">🟢${avail} 🔴${sold}</div>
+        </div>
+        <div class="item-grid">${dots}</div>
+        <div style="margin-top:8px; font-size:0.72rem; color:#64748b;">Giá: <strong style="color:#f87171">${VARIANT_PRICES[vi].toLocaleString('vi-VN')}đ</strong></div>
+      </div>`;
+    }).join('');
+  }
+
+  function addLog(msg, cls='log-gray') {
+    const time = new Date().toLocaleTimeString('vi-VN');
+    logLines.push({ t: time, msg, cls });
+    const box = document.getElementById('logBox');
+    box.innerHTML = logLines.map(l => `<div class="log-line ${l.cls}">[${l.t}] ${l.msg}</div>`).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function previewBuy() {
+    const vi = parseInt(document.getElementById('variantSelect').value);
+    const qty = parseInt(document.getElementById('buyQty').value) || 1;
+    const pool = pools[vi];
+    const avail = pool.filter(i => !i.sold);
+
+    // Clear previous preview
+    pools.forEach(p => p.forEach(i => i.selected = false));
+
+    if (qty > avail.length) {
+      document.getElementById('preview-msg').innerHTML = `<span style="color:#f87171">⚠ Không đủ hàng! Biến thể ${VARIANT_NAMES[vi]} chỉ còn ${avail.length} acc.</span>`;
+      document.getElementById('confirmBtn').disabled = true;
+      pendingPurchase = null;
+    } else {
+      const toSelect = avail.slice(0, qty);
+      toSelect.forEach(i => i.selected = true);
+      const total = qty * VARIANT_PRICES[vi];
+      document.getElementById('preview-msg').innerHTML = `<span style="color:#fbbf24">👁 Preview: Sẽ lấy ${qty} acc đầu tiên từ pool "${VARIANT_NAMES[vi]}" (FIFO). Tổng: ${total.toLocaleString('vi-VN')}đ</span>`;
+      document.getElementById('confirmBtn').disabled = false;
+      pendingPurchase = { vi, qty, items: toSelect };
+      addLog(`PREVIEW: SELECT ${qty} FROM variant[${vi}] WHERE isSold=false ORDER BY id ASC`, 'log-blue');
+    }
+    renderPools();
+  }
+
+  function confirmBuy() {
+    if (!pendingPurchase) return;
+    const { vi, qty, items } = pendingPurchase;
+    const total = qty * VARIANT_PRICES[vi];
+    const orderId = 'ORD-' + Date.now().toString().slice(-8);
+
+    addLog(`── BEGIN TRANSACTION ──`, 'log-yellow');
+    addLog(`UPDATE ProductItem SET isSold=true, soldAt=NOW() WHERE id IN (${items.map(i=>i.id).join(',')})`, 'log-yellow');
+    items.forEach(i => { i.sold = true; i.selected = false; });
+    addLog(`✅ ${qty} items đánh dấu isSold=true`, 'log-green');
+    addLog(`INSERT INTO Order (id="${orderId}", buyer=..., amount=${total}, variant="${VARIANT_NAMES[vi]}")`, 'log-blue');
+    addLog(`COMMIT`, 'log-green');
+    addLog(`── END TRANSACTION – Order ${orderId} hoàn thành ──`, 'log-green');
+
+    // Show receipt
+    document.getElementById('receipt-meta').textContent = `Order: ${orderId} · ${VARIANT_NAMES[vi]} · ${qty} acc · ${total.toLocaleString('vi-VN')}đ`;
+    document.getElementById('receipt-items').innerHTML = items.map(i => {
+      const parts = i.content.split('|');
+      return `<div class="acc-line">❯ <span>${parts[0]}</span><span style="color:#fbbf24">|${parts[1]}</span><span style="color:#94a3b8">|${parts[2] || ''}</span></div>`;
+    }).join('');
+    document.getElementById('receipt').classList.add('show');
+    document.getElementById('confirmBtn').disabled = true;
+    pendingPurchase = null;
+    renderPools();
+    document.getElementById('preview-msg').innerHTML = `<span style="color:#4ade80">✅ Giao dịch thành công!</span>`;
+  }
+
+  function resetAll() {
+    pools = [
+      DEMO_ACCOUNTS[0].map((c,i) => ({ id: i+1, content: c, sold: false, selected: false })),
+      DEMO_ACCOUNTS[1].map((c,i) => ({ id: i+51, content: c, sold: false, selected: false })),
+      DEMO_ACCOUNTS[2].map((c,i) => ({ id: i+81, content: c, sold: false, selected: false })),
+    ];
+    logLines = [];
+    document.getElementById('logBox').innerHTML = '<div class="log-line log-gray">-- Đã reset --</div>';
+    document.getElementById('receipt').classList.remove('show');
+    document.getElementById('preview-msg').textContent = '';
+    document.getElementById('confirmBtn').disabled = true;
+    pendingPurchase = null;
+    renderPools();
+  }
+
+  // Buyer tab
+  let bVariant = { vi: 0, price: 49000, stock: 50, name: 'Gmail 2009-2015 (Cổ)' };
+  function bSelectVariant(vi, price, stock, name) {
+    bVariant = { vi, price, stock, name };
+    document.querySelectorAll('.variant-option').forEach((el,i) => el.classList.toggle('selected', i===vi));
+    document.getElementById('bqty').max = stock;
+    if (parseInt(document.getElementById('bqty').value) > stock) document.getElementById('bqty').value = 1;
+    bUpdateTotal();
+    document.getElementById('buyer-receipt').classList.remove('show');
+  }
+  function bChangeQty(d) {
+    const el = document.getElementById('bqty');
+    let v = Math.max(1, Math.min(bVariant.stock, parseInt(el.value) + d));
+    el.value = v; bUpdateTotal();
+  }
+  function bUpdateTotal() {
+    const qty = parseInt(document.getElementById('bqty').value);
+    document.getElementById('btotal').textContent = (qty * bVariant.price).toLocaleString('vi-VN') + 'đ';
+  }
+  function bBuy() {
+    const qty = parseInt(document.getElementById('bqty').value);
+    const total = qty * bVariant.price;
+    const orderId = 'ORD-' + Date.now().toString().slice(-8);
+    const sample = DEMO_ACCOUNTS[bVariant.vi];
+    document.getElementById('buyer-receipt-meta').textContent = `${orderId} · ${bVariant.name} · ${qty} acc · ${total.toLocaleString('vi-VN')}đ`;
+    document.getElementById('buyer-receipt-items').innerHTML = Array.from({length:qty}, (_,i) => {
+      const acc = sample[i % sample.length].split('|');
+      return `<div class="acc-line">❯ <span>${acc[0]}</span><span style="color:#fbbf24">|${acc[1]}</span><span style="color:#94a3b8">|${acc[2]||''}</span></div>`;
+    }).join('');
+    document.getElementById('buyer-receipt').classList.add('show');
+  }
+
+  // Init
+  renderPools();
+  document.querySelector('.tab.logic').classList.add('active');
+  document.getElementById('view-logic').classList.add('active');
+  document.getElementById('view-seller').classList.remove('active');
+</script>
+</body>
+</html>

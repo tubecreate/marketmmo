@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Container, Grid, Typography, Button, Chip, Tab, Tabs,
-  alpha, Paper, IconButton,
+  Box, Container, Grid, Typography, Button, Chip,
+  alpha, Paper, IconButton, Skeleton,
 } from '@mui/material';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -14,63 +14,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ProductCard, { ProductCardProps } from '@/components/products/ProductCard';
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────
-const mockProducts: ProductCardProps[] = [
-  {
-    id: '1', title: 'Facebook có 1000-5000 bạn bè và có nhiều bài đăng 2023-2025', slug: 'facebook-1000-5000-ban',
-    price: 40000, priceMax: 280000, type: 'DIGITAL', categoryLabel: 'TÀI KHOẢN FB',
-    seller: { username: 'lenhattuan', isVerified: true, isOnline: false, lastActive: '1 giờ trước' },
-    viewCount: 444, soldCount: 4460, rating: 4.8, isSponsored: true,
-  },
-  {
-    id: '2', title: 'Gmail tháng 8 2025 có 2FA+MKP hạn chế thư', slug: 'gmail-2025-2fa',
-    price: 11999, type: 'DIGITAL', categoryLabel: 'GMAIL',
-    seller: { username: 'truongphuchl', isVerified: true, isOnline: true },
-    viewCount: 177, soldCount: 2120, rating: 4.9, isSponsored: true,
-  },
-  {
-    id: '3', title: 'Tài khoản CapCut Pro cấp sẵn', slug: 'capcut-pro-cap-san',
-    price: 1000, priceMax: 280000, type: 'DIGITAL', categoryLabel: 'TÀI KHOẢN CAPCUT',
-    seller: { username: 'bearmedia', isOnline: true },
-    viewCount: 374, soldCount: 442, rating: 4.6, isSponsored: true,
-  },
-  {
-    id: '4', title: 'Tài khoản Twitter cổ từ 2006-2022', slug: 'twitter-co-2006-2022',
-    price: 11000, priceMax: 30000, type: 'DIGITAL', categoryLabel: 'TÀI KHOẢN TWITTER',
-    seller: { username: 'Tuandn', isOnline: false, lastActive: '7 giờ trước' },
-    viewCount: 414, soldCount: 1, rating: 4.5,
-  },
-  {
-    id: '5', title: 'Tài khoản Gmail Cổ-New-Gmail domain | Cho thuê gmail edu chỉ từ 58đ', slug: 'gmail-co-new-domain',
-    price: 58, priceMax: 27000, type: 'DIGITAL', categoryLabel: 'GMAIL',
-    seller: { username: '1trieumail', isVerified: true, isOnline: true },
-    viewCount: 64879, soldCount: 10499, rating: 4.7,
-  },
-  {
-    id: '6', title: 'Clone FB - VIA Việt 200x - 2026 | 2FA - VER HOTMAIL | Chất lượng cao', slug: 'clone-fb-via-viet-200x',
-    price: 2300, priceMax: 16500, type: 'DIGITAL', categoryLabel: 'CLONE FB',
-    seller: { username: '1trieumail', isVerified: true, isOnline: true },
-    viewCount: 127679, soldCount: 22, rating: 4.3,
-  },
-  {
-    id: '7', title: 'Gmail Edu cho thuê giá rẻ 24H', slug: 'gmail-edu-thue-24h',
-    price: 49, priceMax: 999, type: 'DIGITAL', categoryLabel: 'GMAIL EDU',
-    seller: { username: 'nvt1909', isVerified: false, isOnline: false, lastActive: '1 giờ trước' },
-    viewCount: 1909, soldCount: 65664, rating: 4.6,
-  },
-  {
-    id: '8', title: 'Chạy ADS Facebook, Google, Tiktok... - Tư vấn miễn phí', slug: 'chay-ads-fb-google',
-    price: 1, priceMax: 100, type: 'SERVICE', categoryLabel: 'TƯƠNG TÁC',
-    seller: { username: 'minhluong612', isOnline: true },
-    viewCount: 0, soldCount: 125, rating: 4.8,
-  },
-  {
-    id: '9', title: 'Tăng tương tác TikTok siêu nhanh - Hỗ trợ 24/7', slug: 'tang-tuong-tac-tiktok',
-    price: 1000, priceMax: 6666, type: 'SERVICE', categoryLabel: 'TƯƠNG TÁC TIKTOK',
-    seller: { username: 'trananhquan88', isVerified: true, isOnline: false, lastActive: '7 phút trước' },
-    viewCount: 0, soldCount: 77, rating: 4.5,
-  },
-];
+// ─── Categories ─────────────────────────────────────────────────────────────
 
 const banners = [
   {
@@ -124,20 +68,41 @@ const stats = [
 
 export default function HomePage() {
   const [bannerIdx, setBannerIdx] = useState(0);
-  const [mainTab, setMainTab] = useState(0); // 0=all, 1=product, 2=service
+  const [mainTab, setMainTab] = useState(0);
   const [productCat, setProductCat] = useState('all');
   const [serviceCat, setServiceCat] = useState('all');
+  const [allProducts, setAllProducts] = useState<ProductCardProps[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     const t = setInterval(() => setBannerIdx((p) => (p + 1) % banners.length), 5000);
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    fetch('/api/products?limit=20')
+      .then(r => r.json())
+      .then(data => {
+        const mapped: ProductCardProps[] = (data.products ?? []).map((p: any) => ({
+          id: p.id, title: p.title, slug: p.slug,
+          price: p.price, priceMax: p.priceMax ?? undefined,
+          type: p.type, thumbnail: p.thumbnail ?? undefined,
+          categoryLabel: p.category?.name?.toUpperCase() ?? '',
+          seller: { username: p.seller?.username ?? 'n/a', isVerified: false, isOnline: p.seller?.isActive ?? false },
+          viewCount: p.viewCount, soldCount: p.soldCount, rating: p.rating,
+          isSponsored: p.isSponsored,
+        }));
+        setAllProducts(mapped);
+        setLoadingProducts(false);
+      })
+      .catch(() => setLoadingProducts(false));
+  }, []);
+
   const displayedProducts = mainTab === 2
-    ? mockProducts.filter((p) => p.type === 'SERVICE')
+    ? allProducts.filter((p) => p.type === 'SERVICE')
     : mainTab === 1
-    ? mockProducts.filter((p) => p.type === 'DIGITAL')
-    : mockProducts;
+    ? allProducts.filter((p) => p.type === 'DIGITAL')
+    : allProducts;
 
   return (
     <Box>
@@ -293,11 +258,19 @@ export default function HomePage() {
             </Button>
           </Box>
           <Grid container spacing={1.5}>
-            {mockProducts.filter((p) => p.isSponsored).slice(0, 4).map((p) => (
-              <Grid key={p.id} size={{ xs: 6, sm: 4, md: 3 }}>
-                <ProductCard {...p} />
-              </Grid>
-            ))}
+            {loadingProducts ? (
+              [1, 2, 3, 4].map(i => (
+                <Grid key={i} size={{ xs: 6, sm: 4, md: 3 }}>
+                  <Skeleton variant="rounded" height={280} />
+                </Grid>
+              ))
+            ) : (
+              allProducts.filter((p) => p.isSponsored).slice(0, 4).map((p) => (
+                <Grid key={p.id} size={{ xs: 6, sm: 4, md: 3 }}>
+                  <ProductCard {...p} />
+                </Grid>
+              ))
+            )}
           </Grid>
         </Box>
 

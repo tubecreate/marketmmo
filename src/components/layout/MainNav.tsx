@@ -119,7 +119,7 @@ export default function MainNav() {
         bgcolor: 'white',
         borderBottom: '1px solid #e2e8f0',
         position: 'sticky',
-        top: 118,
+        top: 0,
         zIndex: 1050,
         boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}
