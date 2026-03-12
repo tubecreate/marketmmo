@@ -317,11 +317,10 @@ export default function SellerOrdersPage() {
                   color: '#f1f5f9', 
                   borderRadius: 2, 
                   fontFamily: 'monospace', 
-                  fontSize: '0.85rem',
+                  fontSize: '0.7rem',
                   maxHeight: 200,
-                  overflowY: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all'
+                  overflow: 'auto',
+                  whiteSpace: 'pre',
                 }}>
                   {selectedOrder.deliveredContent || 'Chưa cập nhật nội dung'}
                 </Box>
