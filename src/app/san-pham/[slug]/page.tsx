@@ -18,6 +18,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import LoginIcon from '@mui/icons-material/Login';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import LoginModal from '@/components/auth/LoginModal';
 
 interface Variant { id: string; name: string; price: number; description?: string | null; _count?: { items: number }; }
 
@@ -34,6 +35,7 @@ export default function ProductDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedVar, setSelectedVar] = useState<Variant | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [loginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
     if (!params.slug) return;
@@ -293,12 +295,20 @@ export default function ProductDetailPage() {
                       Bạn cần <strong>đăng nhập</strong> để mua sản phẩm này
                     </Typography>
                   </Box>
-                  <Button fullWidth variant="contained" size="large" component={Link} href="/dang-nhap"
+                  <Button fullWidth variant="contained" size="large"
                     startIcon={<LoginIcon />}
+                    onClick={() => setLoginOpen(true)}
                     sx={{ bgcolor: '#eab308', color: '#854d0e', fontWeight: 800, fontSize: '1.1rem', py: 1.5, borderRadius: 1, '&:hover': { bgcolor: '#ca8a04' } }}
                   >
                     Đăng nhập ngay
                   </Button>
+                  <LoginModal 
+                    open={loginOpen} 
+                    onClose={() => setLoginOpen(false)} 
+                    onSuccess={() => {
+                        // Success is handled by context change
+                    }}
+                  />
                 </>
               ) : (
                 <Button

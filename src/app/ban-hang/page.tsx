@@ -1,18 +1,16 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import SiteLayout from '@/components/layout/SiteLayout';
+import SellerLayout from '@/components/layout/SellerLayout';
 import {
-  Box, Container, Typography, Paper, Table, TableBody,
+  Box, Typography, Paper, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, IconButton,
-  Button, Chip, Skeleton, Tooltip, TextField, InputAdornment, Alert,
+  Button, Chip, Skeleton, Tooltip, TextField, InputAdornment,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
-import StorefrontIcon from '@mui/icons-material/Storefront';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
@@ -100,192 +98,190 @@ export default function SellerProductsPage() {
   };
 
   return (
-    <SiteLayout>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Page Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ p: 1.5, bgcolor: '#f0fdf4', borderRadius: 2.5, color: '#16a34a', display: 'flex' }}>
-              <StorefrontIcon fontSize="medium" />
-            </Box>
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 800 }}>Quản lý hàng hóa</Typography>
-              <Typography variant="body2" color="text.secondary">Quản lý danh sách sản phẩm và dịch vụ bạn đang bán</Typography>
+    <SellerLayout>
+      <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
+        {/* Green Header Box */}
+        <Box sx={{ bgcolor: '#16a34a', p: 3.5, borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, textTransform: 'uppercase', letterSpacing: 0.5, color: 'white' }}>Kho sản phẩm</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,255,255,0.15)', px: 1.5, py: 0.8, borderRadius: 1.5 }}>
+              <Typography variant="caption" sx={{ color: 'white', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                💡 Mẹo: Nhận ⚙️ để quản lý giá & tồn kho, 📝 để sửa thông tin.
+              </Typography>
             </Box>
           </Box>
           <Button
             variant="contained" disableElevation
-            startIcon={<AddIcon />}
+            startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
             onClick={handleAdd}
-            sx={{ borderRadius: 2.5, fontWeight: 700, px: 3, py: 1.2, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}
+            sx={{ 
+              borderRadius: 2, fontWeight: 900, px: 2, py: 1, 
+              bgcolor: 'white', color: '#16a34a', fontSize: '0.75rem',
+              '&:hover': { bgcolor: '#f1f5f9' } 
+            }}
           >
-            Đăng sản phẩm mới
+            THÊM SẢN PHẨM
           </Button>
         </Box>
 
-        {/* Balance Status */}
-        <Box sx={{ mb: 3, p: 2, borderRadius: 3, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', gap: 4, alignItems: 'center' }}>
-          <Box>
-            <Typography variant="caption" sx={{ color: '#15803d', fontWeight: 600, display: 'block', mb: 0.5 }}>SỐ DƯ KHẢ DỤNG</Typography>
-            <Typography variant="h5" sx={{ color: '#16a34a', fontWeight: 800 }}>{user?.balance?.toLocaleString('vi-VN')} VNĐ</Typography>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 3, 
+            borderRadius: '0 0 12px 12px', 
+            border: '1px solid #e2e8f0', 
+            borderTop: 'none',
+            bgcolor: 'white' 
+          }}
+        >
+          {/* Filters Row */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+            <TextField
+              sx={{ flex: 1 }}
+              placeholder="Tìm tên sản phẩm..."
+              variant="outlined"
+              size="small"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#94a3b8' }} />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: 2, bgcolor: 'white' }
+              }}
+            />
+            <TextField
+              select
+              size="small"
+              defaultValue="all"
+              sx={{ width: 220, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              SelectProps={{ native: true }}
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Đang bán</option>
+              <option value="hidden">Tạm ẩn</option>
+            </TextField>
+            <Button variant="contained" disableElevation sx={{ bgcolor: '#16a34a', color: 'white', fontWeight: 800, px: 4, borderRadius: 2, '&:hover': { bgcolor: '#15803d' } }}>
+              LỌC DỮ LIỆU
+            </Button>
           </Box>
-          <Box sx={{ width: '1px', height: 40, bgcolor: '#bbf7d0' }} />
-          <Box>
-            <Typography variant="caption" sx={{ color: '#b45309', fontWeight: 600, display: 'block', mb: 0.5 }}>TIỀN CHỜ DUYỆT (TẠM GIỮ 3 NGÀY)</Typography>
-            <Typography variant="h5" sx={{ color: '#d97706', fontWeight: 800 }}>
-              {(() => {
-                // Read fresh from localStorage if context is still old
-                if (typeof window !== 'undefined') {
-                   const stored = localStorage.getItem('mmo_user');
-                   if (stored) {
-                     try { return JSON.parse(stored).holdBalance?.toLocaleString('vi-VN') || '0'; } catch {}
-                   }
-                }
-                return user?.holdBalance?.toLocaleString('vi-VN') || '0';
-              })()} VNĐ
-            </Typography>
-          </Box>
-        </Box>
 
-        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
-          Số dư từ các đơn hàng mới sẽ bị tạm giữ 3 ngày hoặc đến khi người mua xác nhận nhận hàng thành công để bảo vệ người dùng!
-        </Alert>
-
-        {/* Stats */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 3 }}>
-          {[
-            { label: 'Tổng sản phẩm', value: products.length, color: '#2563eb', bg: '#eff6ff' },
-            { label: 'Đang bán', value: products.filter(p => p.status === 'ACTIVE').length, color: '#16a34a', bg: '#f0fdf4' },
-            { label: 'Tổng đã bán', value: products.reduce((s, p) => s + (p.soldCount || 0), 0), color: '#d97706', bg: '#fffbeb' },
-            { label: 'Chờ duyệt', value: products.filter(p => p.status === 'PENDING').length, color: '#7c3aed', bg: '#f5f3ff' },
-          ].map((stat) => (
-            <Paper key={stat.label} elevation={0} sx={{ p: 2.5, borderRadius: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
-              <Typography variant="h5" sx={{ fontWeight: 800, color: stat.color }}>{stat.value}</Typography>
-              <Typography variant="caption" color="text.secondary">{stat.label}</Typography>
-            </Paper>
-          ))}
-        </Box>
-
-        <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-          <TextField
-            fullWidth
-            placeholder="Tìm kiếm trong danh sách hàng hóa..."
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: 'text.secondary' }} />
-                </InputAdornment>
-              ),
-              sx: { borderRadius: 2, bgcolor: '#f8fafc' }
-            }}
-          />
+          <TableContainer>
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead sx={{ bgcolor: '#f0fdf4' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700, colSpan: 1, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>THAO TÁC</TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>SẢN PHẨM</TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>KHO GIÁ</TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>TRẠNG THÁI</TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>NGÀY TẠO</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  [1, 2, 3].map(i => (
+                    <TableRow key={i}><TableCell colSpan={5}><Skeleton height={50} /></TableCell></TableRow>
+                  ))
+                ) : filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                      <Typography color="text.secondary">Bạn chưa có sản phẩm nào.</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts.map((p) => (
+                    <TableRow key={p.id} hover sx={{ '& td': { borderBottom: '1px solid #f1f5f9' } }}>
+                      <TableCell sx={{ py: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Tooltip title="Nạp kho">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleManageStock(p)}
+                              sx={{ border: '1px solid #e2e8f0', color: '#0284c7' }}
+                            >
+                              <InventoryIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Sửa">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleEdit(p)}
+                              sx={{ border: '1px solid #e2e8f0', color: '#d97706' }}
+                            >
+                              <EditIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Xóa">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleDelete(p.id)}
+                              sx={{ border: '1px solid #e2e8f0', color: '#94a3b8' }}
+                            >
+                              <DeleteIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          {p.thumbnail ? (
+                             <Box component="img" src={p.thumbnail} sx={{ width: 44, height: 44, borderRadius: 1.5, objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                          ) : (
+                            <Box sx={{ width: 44, height: 44, bgcolor: '#f1f5f9', borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', border: '1px solid #e2e8f0' }}>📦</Box>
+                          )}
+                          <Box>
+                            <Typography 
+                              variant="body2" 
+                              component={Link} 
+                              href={`/san-pham/${p.slug}`}
+                              sx={{ fontWeight: 700, color: '#334155', textDecoration: 'none', '&:hover': { color: '#1d4ed8', textDecoration: 'underline' } }}
+                            >
+                              {p.title}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>{p.variants?.length || 0} Phân loại sẵn có</Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#475569' }}>
+                          {p.price.toLocaleString('vi-VN')}đ - {p.priceMax ? p.priceMax.toLocaleString('vi-VN') + 'đ' : ''}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>VNĐ / Item</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={p.status === 'ACTIVE' ? 'ĐANG BÁN' : 'TẠM ẨN'} 
+                          size="small" 
+                          sx={{ 
+                            fontWeight: 800, fontSize: '0.65rem', borderRadius: 1.5,
+                            bgcolor: p.status === 'ACTIVE' ? '#dcfce7' : '#f1f5f9',
+                            color: p.status === 'ACTIVE' ? '#166534' : '#64748b',
+                            border: '1px solid',
+                            borderColor: p.status === 'ACTIVE' ? '#bbf7d0' : '#e2e8f0'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ color: '#64748b' }}>
+                          {new Date(p.createdAt).toLocaleDateString('vi-VN')}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Paper>
 
-        <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-          <Table>
-            <TableHead sx={{ bgcolor: '#f8fafc' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Sản phẩm</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Danh mục</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Giá (VNĐ)</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Tồn kho</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Đã bán</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Trạng thái</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="right">Thao tác</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                [1, 2, 3].map(i => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={6}><Skeleton height={50} /></TableCell>
-                  </TableRow>
-                ))
-              ) : filteredProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <Typography color="text.secondary">Bạn chưa có sản phẩm nào.</Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProducts.map((p) => (
-                  <TableRow key={p.id} hover>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        {p.thumbnail ? (
-                           <Box component="img" src={p.thumbnail} sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'cover' }} />
-                        ) : (
-                          <Box sx={{ width: 40, height: 40, bgcolor: '#f1f5f9', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>📦</Box>
-                        )}
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>{p.title}</Typography>
-                          <Typography variant="caption" sx={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: '0.7rem' }}>#{p.id.slice(-8).toUpperCase()}</Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={p.category?.name || 'N/A'} size="small" sx={{ fontSize: '0.75rem' }} />
-                    </TableCell>
-                    <TableCell>
-                      <Typography sx={{ fontWeight: 700, color: '#dc2626' }}>
-                        {p.price.toLocaleString('vi-VN')}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={`${p._count?.items ?? 0} acc`}
-                        size="small"
-                        color={(p._count?.items ?? 0) > 0 ? 'success' : 'default'}
-                        variant="outlined"
-                        sx={{ fontWeight: 700, fontSize: '0.7rem' }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{p.soldCount}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={p.status === 'ACTIVE' ? 'Đang bán' : (p.status === 'DELETED' ? 'Đã xóa' : 'Tạm ẩn')} 
-                        size="small" 
-                        color={p.status === 'ACTIVE' ? 'success' : 'default'}
-                        sx={{ fontWeight: 600, fontSize: '0.7rem' }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                        <Tooltip title="Xem trên sàn">
-                          <IconButton size="small" component={Link} href={`/san-pham/${p.slug}`}>
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Nạp kho">
-                          <IconButton size="small" color="success" onClick={() => handleManageStock(p)}>
-                            <InventoryIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Sửa">
-                          <IconButton size="small" color="primary" onClick={() => handleEdit(p)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Xóa">
-                          <IconButton size="small" color="error" onClick={() => handleDelete(p.id)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
+        {/* Balance Status (Repositioned or stylized if needed, but the user image doesn't show it in the same box) */}
+        {/* We can keep it below or in the sidebar later */}
+        <Box sx={{ mt: 10, textAlign: 'center' }}>
+           <Typography variant="caption" color="text.secondary">© 2026 SHOPMINI.NET - Trang Người Bán</Typography>
+        </Box>
+        
         {/* Dialogs */}
         {user && (
           <ProductForm
@@ -305,7 +301,7 @@ export default function SellerProductsPage() {
             productTitle={selectedProduct.title}
           />
         )}
-      </Container>
-    </SiteLayout>
+      </Box>
+    </SellerLayout>
   );
 }

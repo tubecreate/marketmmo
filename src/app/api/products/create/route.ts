@@ -31,6 +31,7 @@ export async function POST(req: Request) {
         description: description || '',
         slug,
         categoryId: categoryId || null,
+        thumbnail: data.thumbnail || null,
         price: basePrice,
         priceMax: maxPrice,
         type,

@@ -38,7 +38,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem('mmo_user');
     if (stored) {
-      try { setUser(JSON.parse(stored)); } catch { /* ignore */ }
+      try { 
+        const parsed = JSON.parse(stored);
+        if (parsed) setUser(parsed);
+      } catch { /* ignore */ }
     }
   }, []);
 
@@ -57,9 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (identifier: string, password: string) => {
+    const trimmedIdentifier = identifier.trim();
     const res = await fetch('/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: identifier, password }),
+      body: JSON.stringify({ username: trimmedIdentifier, password }),
     });
     const data = await res.json();
     if (!res.ok) return { error: data.error };
@@ -69,9 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (username: string, email: string, password: string) => {
+    const trimmedUsername = username.trim();
+    const trimmedEmail = email.trim();
     const res = await fetch('/api/auth/register', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ username: trimmedUsername, email: trimmedEmail, password }),
     });
     const data = await res.json();
     if (!res.ok) return { error: data.error };

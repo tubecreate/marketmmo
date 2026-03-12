@@ -15,6 +15,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 
 interface Category { id: string; name: string; }
 interface Variant { id: string; name: string; price: string; description: string; }
@@ -46,7 +47,10 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
     categoryId: '',
     type: 'DIGITAL',
     warranty: '3',
+    thumbnail: '',
   });
+
+  const [uploading, setUploading] = useState(false);
 
   const [variants, setVariants] = useState<Variant[]>([
     { id: '1', name: '', price: '', description: '' },
@@ -78,9 +82,10 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           categoryId: (product.categoryId as string) || '',
           type: (product.type as string) || 'DIGITAL',
           warranty: String((product.warrantyDays as number) || 3),
+          thumbnail: (product.thumbnail as string) || '',
         });
       } else {
-        setFormData({ title: '', description: '', categoryId: '', type: 'DIGITAL', warranty: '3' });
+        setFormData({ title: '', description: '', categoryId: '', type: 'DIGITAL', warranty: '3', thumbnail: '' });
         setVariants([{ id: '1', name: '', price: '', description: '' }]);
       }
     }
@@ -102,6 +107,34 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
 
   const getLineCount = (id: string) => (stockMap[id] || '').split('\n').filter(l => l.trim()).length;
   const totalStockCount = variants.reduce((sum, v) => sum + getLineCount(v.id), 0);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError('');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFormData(prev => ({ ...prev, thumbnail: data.url }));
+      } else {
+        setError(data.error || 'Lỗi tải ảnh');
+      }
+    } catch {
+      setError('Lỗi kết nối khi tải ảnh');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const canProceed = () => {
     if (activeStep === 0) return formData.title.trim() && formData.categoryId;
@@ -189,13 +222,37 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
         {/* ─── Step 0: Thông tin cơ bản ─── */}
         {activeStep === 0 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            <TextField
-              fullWidth label="Tên sản phẩm *"
-              placeholder="VD: Tài khoản Netflix Premium 4K Shared"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              InputProps={{ sx: { borderRadius: 2 } }}
-            />
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'start' }}>
+              <Box
+                sx={{
+                  width: 100, height: 100, borderRadius: 2, border: '2px dashed #e2e8f0',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', position: 'relative', bgcolor: '#f8fafc', flexShrink: 0,
+                  cursor: 'pointer', '&:hover': { borderColor: '#1d4ed8', bgcolor: '#f1f5f9' },
+                }}
+                onClick={() => document.getElementById('product-image-upload')?.click()}
+              >
+                {formData.thumbnail ? (
+                  <img src={formData.thumbnail} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <>
+                    {uploading ? <CircularProgress size={20} /> : <AddPhotoAlternateIcon sx={{ color: '#94a3b8', mb: 0.5 }} />}
+                    <Typography variant="caption" color="text.secondary">Ảnh đại diện</Typography>
+                  </>
+                )}
+                <input
+                  type="file" id="product-image-upload" hidden accept="image/*"
+                  onChange={handleFileUpload}
+                />
+              </Box>
+              <TextField
+                fullWidth label="Tên sản phẩm *"
+                placeholder="VD: Tài khoản Netflix Premium 4K Shared"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                InputProps={{ sx: { borderRadius: 2 } }}
+              />
+            </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
               <TextField
                 select fullWidth label="Loại sản phẩm *"
@@ -351,17 +408,24 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>THÔNG TIN SẢN PHẨM</Typography>
-              <Box sx={{ display: 'grid', gap: 1 }}>
-                {[
-                  { k: 'Tên sản phẩm', v: formData.title },
-                  { k: 'Loại', v: formData.type },
-                  { k: 'Bảo hành', v: `${formData.warranty} ngày` },
-                ].map(row => (
-                  <Box key={row.k} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">{row.k}:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.v}</Typography>
+              <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
+                {formData.thumbnail && (
+                  <Box sx={{ width: 100, height: 100, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+                    <img src={formData.thumbnail} alt="Product" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </Box>
-                ))}
+                )}
+                <Box sx={{ display: 'grid', gap: 1, flex: 1 }}>
+                  {[
+                    { k: 'Tên sản phẩm', v: formData.title },
+                    { k: 'Loại', v: formData.type },
+                    { k: 'Bảo hành', v: `${formData.warranty} ngày` },
+                  ].map(row => (
+                    <Box key={row.k} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">{row.k}:</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.v}</Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             </Paper>
             <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
