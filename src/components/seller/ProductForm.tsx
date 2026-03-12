@@ -5,16 +5,14 @@ import {
   Button, TextField, MenuItem, Typography, Box,
   CircularProgress, Alert, Divider, IconButton,
   Chip, Stepper, Step, StepLabel, Paper,
-  Accordion, AccordionSummary, AccordionDetails,
+
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import TuneIcon from '@mui/icons-material/Tune';
-import InventoryIcon from '@mui/icons-material/Inventory';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 
 interface Category { id: string; name: string; }
@@ -33,7 +31,7 @@ const PRODUCT_TYPES = [
   { value: 'SERVICE', label: '⚙️ Dịch vụ (Tăng follow, like...)' },
 ];
 
-const STEPS = ['Thông tin cơ bản', 'Sản phẩm & Giá', 'Nhập kho', 'Xác nhận'];
+const STEPS = ['Thông tin cơ bản', 'Sản phẩm & Giá', 'Xác nhận'];
 
 export default function ProductForm({ open, onClose, onSuccess, product, sellerId }: ProductFormProps) {
   const [activeStep, setActiveStep] = useState(0);
@@ -56,8 +54,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
     { id: '1', name: '', price: '', description: '' },
   ]);
 
-  // Stock per variant: { [variantId]: string (textarea content) }
-  const [stockMap, setStockMap] = useState<Record<string, string>>({});
+
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -74,7 +71,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
       fetchCategories();
       setActiveStep(0);
       setError('');
-      setStockMap({});
+
       if (product) {
         setFormData({
           title: (product.title as string) || '',
@@ -98,28 +95,13 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
   const removeVariant = (id: string) => {
     if (variants.length === 1) return;
     setVariants(prev => prev.filter(v => v.id !== id));
-    setStockMap(prev => { const next = { ...prev }; delete next[id]; return next; });
   };
 
   const updateVariant = (id: string, field: keyof Variant, value: string) => {
     setVariants(prev => prev.map(v => v.id === id ? { ...v, [field]: value } : v));
   };
 
-  const getLineCount = (id: string) => (stockMap[id] || '').split('\n').filter(l => l.trim()).length;
-  
-  const validateFormat = (line: string) => {
-    if (!line.trim()) return true;
-    const parts = line.split('|');
-    return parts.length === 4 && parts.every(p => p.trim().length > 0);
-  };
 
-  const isStockValid = (id: string) => {
-    const lines = (stockMap[id] || '').split('\n').filter(l => l.trim());
-    if (lines.length === 0) return true;
-    return lines.every(validateFormat);
-  };
-
-  const totalStockCount = variants.reduce((sum, v) => sum + getLineCount(v.id), 0);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -152,36 +134,10 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
   const canProceed = () => {
     if (activeStep === 0) return formData.title.trim() && formData.categoryId;
     if (activeStep === 1) return variants.every(v => v.name.trim() && v.price);
-    if (activeStep === 2) return variants.every(v => isStockValid(v.id));
     return true;
   };
 
-  const handleNext = async () => {
-    if (activeStep === 2) {
-      // Check for duplicates before proceeding to confirmation
-      const allLines = Object.values(stockMap).flatMap(s => s.split('\n')).filter(l => l.trim());
-      if (allLines.length > 0) {
-        setLoading(true);
-        setError('');
-        try {
-          const res = await fetch('/api/inventory/check-duplicates', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: allLines }),
-          });
-          const data = await res.json();
-          if (data.success && data.duplicates.length > 0) {
-            setError(`Phát hiện ${data.duplicates.length} dữ liệu đã tồn tại trên hệ thống. Vui lòng kiểm tra lại: ${data.duplicates.slice(0, 3).join(', ')}${data.duplicates.length > 3 ? '...' : ''}`);
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
-          console.error('Check duplicates error:', err);
-        } finally {
-          setLoading(false);
-        }
-      }
-    }
+  const handleNext = () => {
     setActiveStep(s => s + 1);
   };
 
@@ -197,7 +153,6 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
         body: JSON.stringify({
           ...formData,
           variants,
-          stockMap, // pass stock data for each variant
           sellerId,
           price: parseFloat(variants[0]?.price || '0'),
           warrantyDays: parseInt(formData.warranty),
@@ -210,7 +165,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
     finally { setLoading(false); }
   };
 
-  const stepIcons = [StorefrontIcon, TuneIcon, InventoryIcon, CheckCircleIcon];
+  const stepIcons = [StorefrontIcon, TuneIcon, CheckCircleIcon];
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, maxHeight: '90vh' } }}>
@@ -393,80 +348,9 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           </Box>
         )}
 
-        {/* ─── Step 2: Nhập kho ─── */}
-        {activeStep === 2 && (
-          <Box>
-            <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: '#fffbeb', borderColor: '#fde68a' }}>
-              <Typography variant="body2" sx={{ color: '#92400e', fontSize: '0.85rem' }}>
-                📋 Nhập kho ban đầu cho từng gói. <strong>Định dạng bắt buộc: mỗi dòng là 1 tài khoản</strong>.
-                Ví dụ: <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: 4 }}>email|password|recovery|2fa</code>.
-                <br/>
-                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>* Đúng định dạng sẽ có viền xanh, sai định dạng viền đỏ. Hệ thống sẽ check trùng toàn sàn khi bấm "Tiếp theo".</span>
-              </Typography>
-            </Paper>
-            {variants.map((variant, idx) => {
-              const count = getLineCount(variant.id);
-              return (
-                <Accordion key={variant.id} defaultExpanded={idx === 0} sx={{ mb: 1, borderRadius: '12px !important', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider' }}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%', pr: 1 }}>
-                      <Chip label={`Gói ${idx + 1}`} size="small" color="primary" sx={{ fontWeight: 700 }} />
-                      <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>
-                        {variant.name || `Sản phẩm ${idx + 1}`}
-                        {variant.price && <span style={{ color: '#dc2626', marginLeft: 8 }}>{parseInt(variant.price).toLocaleString('vi-VN')}đ</span>}
-                      </Typography>
-                      {count > 0 ? (
-                        <Chip icon={<CheckCircleIcon sx={{ fontSize: '14px !important' }} />} label={`${count} items`} size="small" color="success" />
-                      ) : (
-                        <Chip label="Chưa nhập" size="small" variant="outlined" sx={{ color: '#94a3b8' }} />
-                      )}
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <TextField
-                      fullWidth multiline rows={5}
-                      placeholder={`Dán ${variant.name || 'tài khoản'} vào đây...\nkumarbulet1000@gmail.com|VAwY93L1rR|kumarbulthoaminh0607@naver.com|2ooh xehr usg2 43ri`}
-                      value={stockMap[variant.id] || ''}
-                      onChange={(e) => setStockMap(prev => ({ ...prev, [variant.id]: e.target.value }))}
-                      error={!isStockValid(variant.id)}
-                      InputProps={{ 
-                        sx: { 
-                          fontFamily: 'monospace', 
-                          fontSize: '0.82rem', 
-                          borderRadius: 2,
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: stockMap[variant.id]?.trim() ? (isStockValid(variant.id) ? '#16a34a' : '#d32f2f') : 'rgba(0,0,0,0.23)',
-                            borderWidth: stockMap[variant.id]?.trim() ? 2 : 1
-                          },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: stockMap[variant.id]?.trim() ? (isStockValid(variant.id) ? '#15803d' : '#c62828') : 'rgba(0,0,0,0.87)'
-                          }
-                        } 
-                      }}
-                    />
-                    <Typography variant="caption" sx={{ mt: 0.5, display: 'block', color: stockMap[variant.id]?.trim() ? (isStockValid(variant.id) ? '#16a34a' : '#d32f2f') : 'text.secondary', fontWeight: stockMap[variant.id]?.trim() ? 600 : 400 }}>
-                      {!stockMap[variant.id]?.trim() 
-                        ? 'Mỗi dòng = 1 tài khoản. Dòng trống sẽ bị bỏ qua.' 
-                        : isStockValid(variant.id) 
-                          ? `✅ Định dạng hợp lệ (${count} dòng)` 
-                          : '❌ Sai định dạng! Mỗi dòng phải có 4 phần cách nhau bởi dấu | (Ví dụ: email|pass|recovery|2fa)'}
-                    </Typography>
-                  </AccordionDetails>
-                </Accordion>
-              );
-            })}
-            {totalStockCount > 0 && (
-              <Paper sx={{ p: 2, mt: 2, borderRadius: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <Typography variant="body2" sx={{ color: '#15803d', fontWeight: 700 }}>
-                  ✅ Tổng cộng: {totalStockCount} tài khoản sẽ được nhập vào kho ngay sau khi đăng.
-                </Typography>
-              </Paper>
-            )}
-          </Box>
-        )}
 
-        {/* ─── Step 3: Xác nhận ─── */}
-        {activeStep === 3 && (
+        {/* ─── Step 2: Xác nhận ─── */}
+        {activeStep === 2 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>THÔNG TIN GIAN HÀNG</Typography>
@@ -500,16 +384,14 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>{parseInt(v.price).toLocaleString('vi-VN')}đ</Typography>
-                    <Typography variant="caption" color="text.secondary">{getLineCount(v.id) > 0 ? `${getLineCount(v.id)} acc sẵn sàng` : 'Chưa có kho'}</Typography>
+                    <Typography variant="caption" color="text.secondary">Nhập kho sau khi tạo</Typography>
                   </Box>
                 </Box>
               ))}
             </Paper>
-            {totalStockCount > 0 && (
-              <Paper sx={{ p: 2, borderRadius: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <Typography variant="body2" sx={{ color: '#15803d', fontWeight: 700 }}>📦 Tổng kho ban đầu: {totalStockCount} tài khoản</Typography>
-              </Paper>
-            )}
+            <Paper sx={{ p: 2, borderRadius: 2, bgcolor: '#fffbeb', border: '1px solid #fde68a' }}>
+              <Typography variant="body2" sx={{ color: '#92400e', fontWeight: 600 }}>💡 Sau khi tạo gian hàng, bạn có thể nhập kho bằng file .txt trong phần quản lý kho.</Typography>
+            </Paper>
           </Box>
         )}
       </DialogContent>
@@ -533,7 +415,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               '&:hover': { bgcolor: '#15803d !important' }
             }}
           >
-            {loading && activeStep === 2 ? <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} /> : null}
+
             Tiếp theo →
           </Button>
         ) : (

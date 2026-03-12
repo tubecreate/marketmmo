@@ -7,7 +7,7 @@ interface VariantInput { id: string; name: string; price: string; description?: 
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { title, description, categoryId, type, sellerId, warrantyDays, variants, stockMap } = data;
+    const { title, description, categoryId, type, sellerId, warrantyDays, variants } = data;
 
     if (!title || !type || !sellerId) {
       return NextResponse.json({ error: 'Missing required fields: title, type, sellerId' }, { status: 400 });
@@ -42,11 +42,10 @@ export async function POST(req: Request) {
     });
 
     // 2. Create variants (if any)
-    const createdVariants: { tempId: string; dbId: string }[] = [];
     for (let i = 0; i < variantList.length; i++) {
       const v = variantList[i];
       if (!v.name?.trim() || !v.price) continue;
-      const dbVariant = await prisma.productVariant.create({
+      await prisma.productVariant.create({
         data: {
           productId: product.id,
           name: v.name.trim(),
@@ -55,28 +54,6 @@ export async function POST(req: Request) {
           sortOrder: i,
         },
       });
-      createdVariants.push({ tempId: v.id, dbId: dbVariant.id });
-    }
-
-    // 3. Upload stock items per variant (from stockMap: { [tempVariantId]: "line1\nline2" })
-    if (stockMap && typeof stockMap === 'object') {
-      for (const [tempId, rawContent] of Object.entries(stockMap)) {
-        if (!rawContent || typeof rawContent !== 'string') continue;
-        const lines = rawContent.split('\n').map(l => l.trim()).filter(Boolean);
-        if (lines.length === 0) continue;
-
-        // Find the matching DB variant ID
-        const match = createdVariants.find(cv => cv.tempId === tempId);
-        const variantId = match?.dbId || null;
-
-        await prisma.productItem.createMany({
-          data: lines.map(line => ({
-            productId: product.id,
-            variantId,
-            content: line,
-          })),
-        });
-      }
     }
 
     return NextResponse.json({ success: true, product });
