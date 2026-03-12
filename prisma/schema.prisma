@@ -116,6 +116,7 @@ model Order {
   productId       String
   product         Product   @relation(fields: [productId], references: [id])
   variantName     String?   // Tên biến thể đã mua (vd: Kênh Bật Kiếm Tiền)
+  quantity        Int       @default(1)
   amount          Float
   fee             Float     @default(0)
   status          String    @default("PENDING") // PENDING, HOLDING, COMPLETED, DISPUTED, REFUNDED

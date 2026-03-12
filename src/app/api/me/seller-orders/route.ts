@@ -23,6 +23,15 @@ export async function GET(req: Request) {
         product: { select: { title: true, slug: true, thumbnail: true } },
         buyer: { select: { username: true } },
       },
+      // deliveredContent and warrantyExpire are base fields of Order, they are included by default 
+      // when using findMany on Order without a specific select block. 
+      // But wait, findMany with include returns all fields + relations.
+      // So deliveredContent should already be there. 
+      // Let me check prisma schema again. Yes, they are fields of Order.
+      // I don't need to add them to 'include'. they are there.
+      // Ah, but I should probably check if my previous code in the frontend was expecting them.
+      // Let's just make it explicit if I'm unsure, but findMany returns all fields.
+
       orderBy: { createdAt: 'desc' },
     });
 

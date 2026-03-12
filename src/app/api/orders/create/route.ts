@@ -72,6 +72,7 @@ export async function POST(req: Request) {
           sellerId: product.sellerId,
           productId,
           amount: totalAmount,
+          quantity,
           fee: platformFee,
           status: 'HOLDING', // Temporary hold status
           deliveredContent,

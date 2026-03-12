@@ -39,7 +39,7 @@ export default function SellerSidebar() {
 
   return (
     <Box sx={{ 
-      width: 260, 
+      width: 210, 
       bgcolor: 'white', 
       height: 'fit-content', 
       display: 'flex', 
@@ -47,10 +47,11 @@ export default function SellerSidebar() {
       borderRadius: '12px',
       border: '1px solid #e2e8f0',
       mt: 0,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      flexShrink: 0
     }}>
-      <Box sx={{ p: 2, pt: 3, borderBottom: '1px solid #f1f5f9' }}>
-        <Typography variant="caption" sx={{ fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1 }}>
+      <Box sx={{ p: 1.5, pt: 2, borderBottom: '1px solid #f1f5f9' }}>
+        <Typography variant="caption" sx={{ fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
           Menu Người Bán
         </Typography>
       </Box>
@@ -73,14 +74,17 @@ export default function SellerSidebar() {
                   py: 1.2
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-                  <Icon fontSize="small" />
+                <ListItemIcon sx={{ minWidth: 28, color: 'inherit' }}>
+                  <Icon sx={{ fontSize: 18 }} />
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.label} 
                   primaryTypographyProps={{ 
-                    fontSize: '0.875rem', 
-                    fontWeight: isActive ? 700 : 500 
+                    fontSize: '0.8rem', 
+                    fontWeight: isActive ? 700 : 500,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }} 
                 />
               </ListItemButton>
