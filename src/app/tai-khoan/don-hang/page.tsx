@@ -13,6 +13,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import DownloadIcon from '@mui/icons-material/Download';
+import ForumIcon from '@mui/icons-material/Forum';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -43,6 +44,10 @@ interface Order {
   };
   seller?: {
     username: string;
+  };
+  dispute?: {
+    id: string;
+    status: string;
   };
 }
 
@@ -229,7 +234,12 @@ export default function OrdersPage() {
                       {(order.status === 'HOLDING' || order.status === 'COMPLETED') && (
                         <Button size="small" variant="outlined" color="error" onClick={() => { setDisputeOrder(order); setDisputeReason(''); setDisputeEvidence(''); setDisputeFaultyCount(1); }} sx={{ borderRadius: 1.5, fontSize: '0.75rem' }}>Khiếu nại</Button>
                       )}
-                      {order.status === 'DISPUTED' && (
+                      {order.dispute && order.dispute.status === 'ESCALATED' && (
+                        <Button size="small" variant="contained" startIcon={<ForumIcon />} onClick={() => router.push(`/tai-khoan/khieu-nai/${order.dispute!.id}`)} sx={{ borderRadius: 1.5, fontSize: '0.75rem', bgcolor: '#d97706', '&:hover': { bgcolor: '#b45309' } }}>
+                          Phòng tranh chấp
+                        </Button>
+                      )}
+                      {order.status === 'DISPUTED' && (!order.dispute || order.dispute.status !== 'ESCALATED') && (
                         <Chip label="Đang khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fee2e2', color: '#991b1b', fontSize: '0.7rem' }} />
                       )}
                     </Box>

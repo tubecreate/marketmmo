@@ -19,6 +19,7 @@ export async function GET(req: Request) {
     include: {
       product: { select: { title: true, slug: true, type: true, thumbnail: true } },
       seller: { select: { username: true } },
+      dispute: { select: { id: true, status: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
