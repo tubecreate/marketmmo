@@ -106,6 +106,19 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
   };
 
   const getLineCount = (id: string) => (stockMap[id] || '').split('\n').filter(l => l.trim()).length;
+  
+  const validateFormat = (line: string) => {
+    if (!line.trim()) return true;
+    const parts = line.split('|');
+    return parts.length === 4 && parts.every(p => p.trim().length > 0);
+  };
+
+  const isStockValid = (id: string) => {
+    const lines = (stockMap[id] || '').split('\n').filter(l => l.trim());
+    if (lines.length === 0) return true;
+    return lines.every(validateFormat);
+  };
+
   const totalStockCount = variants.reduce((sum, v) => sum + getLineCount(v.id), 0);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,7 +152,37 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
   const canProceed = () => {
     if (activeStep === 0) return formData.title.trim() && formData.categoryId;
     if (activeStep === 1) return variants.every(v => v.name.trim() && v.price);
+    if (activeStep === 2) return variants.every(v => isStockValid(v.id));
     return true;
+  };
+
+  const handleNext = async () => {
+    if (activeStep === 2) {
+      // Check for duplicates before proceeding to confirmation
+      const allLines = Object.values(stockMap).flatMap(s => s.split('\n')).filter(l => l.trim());
+      if (allLines.length > 0) {
+        setLoading(true);
+        setError('');
+        try {
+          const res = await fetch('/api/inventory/check-duplicates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: allLines }),
+          });
+          const data = await res.json();
+          if (data.success && data.duplicates.length > 0) {
+            setError(`Phát hiện ${data.duplicates.length} dữ liệu đã tồn tại trên hệ thống. Vui lòng kiểm tra lại: ${data.duplicates.slice(0, 3).join(', ')}${data.duplicates.length > 3 ? '...' : ''}`);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Check duplicates error:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+    setActiveStep(s => s + 1);
   };
 
   const handleSubmit = async () => {
@@ -355,9 +398,10 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           <Box>
             <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: '#fffbeb', borderColor: '#fde68a' }}>
               <Typography variant="body2" sx={{ color: '#92400e', fontSize: '0.85rem' }}>
-                📋 Nhập kho ban đầu cho từng gói. <strong>Định dạng: mỗi dòng là 1 tài khoản</strong>.
-                Ví dụ: <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: 4 }}>email|password|2fa_key</code>.
-                Bạn có thể để trống và nạp kho sau.
+                📋 Nhập kho ban đầu cho từng gói. <strong>Định dạng bắt buộc: mỗi dòng là 1 tài khoản</strong>.
+                Ví dụ: <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: 4 }}>email|password|recovery|2fa</code>.
+                <br/>
+                <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>* Đúng định dạng sẽ có viền xanh, sai định dạng viền đỏ. Hệ thống sẽ check trùng toàn sàn khi bấm "Tiếp theo".</span>
               </Typography>
             </Paper>
             {variants.map((variant, idx) => {
@@ -381,13 +425,31 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                   <AccordionDetails>
                     <TextField
                       fullWidth multiline rows={5}
-                      placeholder={`Dán ${variant.name || 'tài khoản'} vào đây...\nuser1@gmail.com|Pass@123|TOTP_KEY\nuser2@gmail.com|Pass@456|TOTP_KEY`}
+                      placeholder={`Dán ${variant.name || 'tài khoản'} vào đây...\nkumarbulet1000@gmail.com|VAwY93L1rR|kumarbulthoaminh0607@naver.com|2ooh xehr usg2 43ri`}
                       value={stockMap[variant.id] || ''}
                       onChange={(e) => setStockMap(prev => ({ ...prev, [variant.id]: e.target.value }))}
-                      InputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.82rem', borderRadius: 2 } }}
+                      error={!isStockValid(variant.id)}
+                      InputProps={{ 
+                        sx: { 
+                          fontFamily: 'monospace', 
+                          fontSize: '0.82rem', 
+                          borderRadius: 2,
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: stockMap[variant.id]?.trim() ? (isStockValid(variant.id) ? '#16a34a' : '#d32f2f') : 'rgba(0,0,0,0.23)',
+                            borderWidth: stockMap[variant.id]?.trim() ? 2 : 1
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: stockMap[variant.id]?.trim() ? (isStockValid(variant.id) ? '#15803d' : '#c62828') : 'rgba(0,0,0,0.87)'
+                          }
+                        } 
+                      }}
                     />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      {count > 0 ? `✅ ${count} dòng hợp lệ sẽ được nhập vào kho gói "${variant.name}"` : 'Mỗi dòng = 1 tài khoản. Dòng trống sẽ bị bỏ qua.'}
+                    <Typography variant="caption" sx={{ mt: 0.5, display: 'block', color: stockMap[variant.id]?.trim() ? (isStockValid(variant.id) ? '#16a34a' : '#d32f2f') : 'text.secondary', fontWeight: stockMap[variant.id]?.trim() ? 600 : 400 }}>
+                      {!stockMap[variant.id]?.trim() 
+                        ? 'Mỗi dòng = 1 tài khoản. Dòng trống sẽ bị bỏ qua.' 
+                        : isStockValid(variant.id) 
+                          ? `✅ Định dạng hợp lệ (${count} dòng)` 
+                          : '❌ Sai định dạng! Mỗi dòng phải có 4 phần cách nhau bởi dấu | (Ví dụ: email|pass|recovery|2fa)'}
                     </Typography>
                   </AccordionDetails>
                 </Accordion>
@@ -463,14 +525,15 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
         {activeStep < STEPS.length - 1 ? (
           <Button
             variant="contained" disableElevation
-            onClick={() => setActiveStep(s => s + 1)}
-            disabled={!canProceed()}
+            onClick={handleNext}
+            disabled={!canProceed() || loading}
             sx={{ 
               fontWeight: 800, borderRadius: 2, px: 3,
               bgcolor: '#16a34a !important', color: 'white !important',
               '&:hover': { bgcolor: '#15803d !important' }
             }}
           >
+            {loading && activeStep === 2 ? <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} /> : null}
             Tiếp theo →
           </Button>
         ) : (
