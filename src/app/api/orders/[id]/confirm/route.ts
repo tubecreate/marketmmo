@@ -3,10 +3,10 @@ import { prisma } from '@/lib/db';
 
 // POST /api/orders/[id]/confirm
 // Body: { buyerId }
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { buyerId } = await req.json();
-    const orderId = params.id;
+    const { id: orderId } = await params;
 
     if (!buyerId) {
       return NextResponse.json({ error: 'Missing buyerId' }, { status: 400 });
