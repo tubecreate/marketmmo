@@ -12,8 +12,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Thiếu thông tin người mua' }, { status: 400 });
     }
 
-    const dispute = await prisma.dispute.findUnique({
-      where: { id: disputeId },
+    const dispute = await prisma.dispute.findFirst({
+      where: {
+        OR: [
+          { id: disputeId },
+          { orderId: disputeId }
+        ]
+      },
       include: { order: true }
     });
 
@@ -29,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     await prisma.$transaction([
       prisma.dispute.update({
-        where: { id: disputeId },
+        where: { id: dispute.id },
         data: { status: 'CLOSED', resolution: 'CANCELED_BY_BUYER', resolvedAt: new Date() }
       }),
       prisma.order.update({
@@ -49,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Cancel dispute error:', error);
     return NextResponse.json({ error: 'Lỗi huỷ khiếu nại' }, { status: 500 });
   }

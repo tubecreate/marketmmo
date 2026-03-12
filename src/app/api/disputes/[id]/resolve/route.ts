@@ -13,8 +13,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Thiếu thông tin' }, { status: 400 });
     }
 
-    const dispute = await prisma.dispute.findUnique({
-      where: { id: disputeId },
+    const dispute = await prisma.dispute.findFirst({
+      where: {
+        OR: [
+          { id: disputeId },
+          { orderId: disputeId }
+        ]
+      },
       include: {
         order: {
           include: {
@@ -37,8 +42,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       // Refund: chuyển tiền từ seller → buyer
       await prisma.$transaction([
         prisma.dispute.update({
-          where: { id: disputeId },
+          where: { id: dispute.id },
           data: { status: 'REFUNDED', resolution: 'REFUND', sellerReply, refundAmount, resolvedAt: new Date() },
+        }),
+        // Update order status
+        prisma.order.update({
+          where: { id: order.id },
+          data: { status: 'REFUNDED' },
         }),
         // Decrease seller balance/holdBalance
         prisma.user.update({
@@ -104,7 +114,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       await prisma.$transaction([
         prisma.dispute.update({
-          where: { id: disputeId },
+          where: { id: dispute.id },
           data: { status: 'WARRANTY', resolution: 'WARRANTY', sellerReply, resolvedAt: new Date() },
         }),
         // Mark stock items as sold
@@ -114,10 +124,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             data: { isSold: true, soldAt: new Date() },
           })
         ),
-        // Update order delivered content
+        // Update order delivered content and revert status
         prisma.order.update({
           where: { id: order.id },
-          data: { deliveredContent: updatedDelivered },
+          data: { 
+            deliveredContent: updatedDelivered,
+            status: order.warrantyExpire && new Date(order.warrantyExpire) < new Date() ? 'COMPLETED' : 'HOLDING'
+          },
         }),
       ]);
 
@@ -127,13 +140,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       // Escalate to 3-way chat
       await prisma.$transaction([
         prisma.dispute.update({
-          where: { id: disputeId },
+          where: { id: dispute.id },
           data: { status: 'ESCALATED', resolution: 'DISPUTE', sellerReply },
         }),
         // Create initial system message in dispute room
         prisma.disputeMessage.create({
           data: {
-            disputeId,
+            disputeId: dispute.id,
             senderId: sellerId,
             senderRole: 'SELLER',
             message: sellerReply || 'Người bán yêu cầu tranh chấp. Admin sẽ xem xét và xử lý.',
@@ -147,14 +160,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const orderShortId = order.id.slice(-8).toUpperCase();
         
         // Link cho Buyer
-        const buyerDisputeLink = `${baseUrl}/tai-khoan/khieu-nai/${disputeId}`;
+        const buyerDisputeLink = `${baseUrl}/tai-khoan/khieu-nai/${dispute.id}`;
         await sendSystemMessage(
           order.buyerId,
           `⚖️ Khiếu nại đơn hàng #${orderShortId} đã được chuyển thành TRANH CHẤP.\nAdmin đã tham gia vào phòng hỗ trợ.\n\n🔗 Vào phòng tranh chấp: ${buyerDisputeLink}`
         );
 
         // Link cho Seller
-        const sellerDisputeLink = `${baseUrl}/ban-hang/khieu-nai/${disputeId}`;
+        const sellerDisputeLink = `${baseUrl}/ban-hang/khieu-nai/${dispute.id}`;
         await sendSystemMessage(
           order.sellerId,
           `⚖️ Đơn hàng #${orderShortId} đã được chuyển sang trạng thái TRANH CHẤP.\n\n🔗 Vào phòng tranh chấp: ${sellerDisputeLink}`

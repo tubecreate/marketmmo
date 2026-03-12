@@ -26,6 +26,7 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
   COMPLETED: { label: 'Hoàn thành', color: '#16a34a', bg: '#dcfce7' },
   DISPUTED:  { label: 'Khiếu nại',  color: '#dc2626', bg: '#fee2e2' },
   PENDING:   { label: 'Đang xử lý', color: '#64748b', bg: '#f1f5f9' },
+  REFUNDED:  { label: 'Đã hoàn tiền', color: '#7c3aed', bg: '#f5f3ff' },
 };
 
 interface Order {
@@ -131,7 +132,7 @@ export default function OrdersPage() {
     const element = document.createElement('a');
     const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
     element.href = URL.createObjectURL(file);
-    element.download = `don-hang-${orderId.slice(0, 8)}.txt`;
+    element.download = `don-hang-${orderId.slice(-8).toUpperCase()}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -186,7 +187,11 @@ export default function OrdersPage() {
     
     if (q) {
       setSearch(q);
-      const order = orders.find(o => o.id.toLowerCase().includes(q.toLowerCase()));
+      const order = orders.find(o => 
+        o.id.toLowerCase().includes(q.toLowerCase()) || 
+        o.product?.title?.toLowerCase().includes(q.toLowerCase()) ||
+        (o.dispute && o.dispute.id.toLowerCase().includes(q.toLowerCase()))
+      );
       if (order) {
         if (openDispute && (order.status === 'HOLDING' || order.status === 'COMPLETED') && disputeOrder?.id !== order.id) {
           setDisputeOrder(order);
@@ -289,7 +294,7 @@ export default function OrdersPage() {
                         {order.product?.title ?? 'Gian hàng'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        Mã đơn: #{order.id.slice(0, 8)} · Người bán:{' '}
+                        Mã đơn: #{order.id.slice(-8).toUpperCase()} · Người bán:{' '}
                         <Box component="span" 
                           onClick={(e: React.MouseEvent) => { 
                             e.stopPropagation(); 

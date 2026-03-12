@@ -18,8 +18,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Không có quyền admin' }, { status: 403 });
     }
 
-    const dispute = await prisma.dispute.findUnique({
-      where: { id: disputeId },
+    const dispute = await prisma.dispute.findFirst({
+      where: {
+        OR: [
+          { id: disputeId },
+          { orderId: disputeId }
+        ]
+      },
       include: { order: true },
     });
 
@@ -37,7 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       // Admin sides with buyer → refund
       await prisma.$transaction([
         prisma.dispute.update({
-          where: { id: disputeId },
+          where: { id: dispute.id },
           data: {
             status: 'RESOLVED',
             adminDecision: `Hoàn tiền cho người mua: ${refundAmount.toLocaleString('vi-VN')}đ`,
@@ -64,7 +69,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }),
         prisma.disputeMessage.create({
           data: {
-            disputeId,
+            disputeId: dispute.id,
             senderId: adminId,
             senderRole: 'ADMIN',
             message: adminMessage || `🔨 Admin đã quyết định hoàn tiền ${refundAmount.toLocaleString('vi-VN')}đ cho người mua. Tranh chấp đã đóng.`,
@@ -76,7 +81,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const sellerReceives = order.amount - order.fee;
       await prisma.$transaction([
         prisma.dispute.update({
-          where: { id: disputeId },
+          where: { id: dispute.id },
           data: {
             status: 'RESOLVED',
             adminDecision: 'Quyết định có lợi cho người bán',
@@ -97,7 +102,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }),
         prisma.disputeMessage.create({
           data: {
-            disputeId,
+            disputeId: dispute.id,
             senderId: adminId,
             senderRole: 'ADMIN',
             message: adminMessage || '🔨 Admin đã quyết định có lợi cho người bán. Tiền đã được giải phóng. Tranh chấp đã đóng.',
