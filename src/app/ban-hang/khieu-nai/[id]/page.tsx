@@ -51,7 +51,7 @@ export default function DisputeChatPage() {
   }, [disputeId, user?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
 
   // Polling for new messages
   useEffect(() => {
