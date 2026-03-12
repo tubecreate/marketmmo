@@ -8,10 +8,12 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🗑  Clearing old data...');
+  // Delete in order to respect foreign key constraints
   await prisma.review.deleteMany();
   await prisma.dispute.deleteMany();
   await prisma.order.deleteMany();
   await prisma.productItem.deleteMany();
+  await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
   await prisma.transaction.deleteMany();
@@ -19,13 +21,15 @@ async function main() {
   await prisma.affiliateLink.deleteMany();
   await prisma.chatLog.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.announcement.deleteMany();
+  await prisma.banner.deleteMany();
 
   const pw = await bcrypt.hash('123456', 10);
 
   // ─── USERS ────────────────────────────────────────────────────────────────
   console.log('👤 Creating users...');
 
-  const admin = await prisma.user.create({ data: {
+  await prisma.user.create({ data: {
     username: 'admin', email: 'admin@marketmmo.com', passwordHash: pw,
     role: 'ADMIN', fullName: 'Admin MarketMMO', balance: 0, isActive: true,
   }});
@@ -53,7 +57,7 @@ async function main() {
     }}),
   ]);
 
-  const [buyer1, buyer2, buyer3, buyer4, buyer5] = await Promise.all([
+  const [buyer1, buyer2, buyer3, buyer4] = await Promise.all([
     prisma.user.create({ data: {
       username: 'nguyenvan', email: 'nguyenvan@gmail.com', passwordHash: pw,
       role: 'BUYER', fullName: 'Nguyễn Văn A', balance: 250000, isActive: true,
