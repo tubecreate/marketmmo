@@ -136,11 +136,26 @@ model Dispute {
   orderId       String    @unique
   order         Order     @relation(fields: [orderId], references: [id])
   reason        String
-  evidence      String?
-  status        String    @default("OPEN") // OPEN, RESOLVED, CLOSED
+  evidence      String?             // Items lỗi buyer paste vào
+  faultyCount   Int       @default(0) // Số items lỗi
+  status        String    @default("OPEN") // OPEN, REFUNDED, WARRANTY, ESCALATED, RESOLVED, CLOSED
+  resolution    String?             // REFUND, WARRANTY, DISPUTE
+  sellerReply   String?
   adminDecision String?
+  refundAmount  Float     @default(0)
   resolvedAt    DateTime?
   createdAt     DateTime  @default(now())
+  messages      DisputeMessage[]
+}
+
+model DisputeMessage {
+  id          String    @id @default(cuid())
+  disputeId   String
+  dispute     Dispute   @relation(fields: [disputeId], references: [id])
+  senderId    String
+  senderRole  String    // BUYER, SELLER, ADMIN
+  message     String
+  createdAt   DateTime  @default(now())
 }
 
 model Transaction {
@@ -219,3 +234,27 @@ model Announcement {
   order     Int       @default(0)
   createdAt DateTime  @default(now())
 }
+
+// Admin system settings (single row, key-value)
+model SystemConfig {
+  id                  String  @id @default("default")
+  maxBoothsPerSeller  Int     @default(10)   // Giới hạn gian hàng mỗi seller
+  maxItemsPerOrder    Int     @default(50)   // Giới hạn items mỗi đơn
+  commissionRate      Float   @default(5)    // % hoa hồng sàn
+  minWithdrawAmount   Float   @default(50000)
+  maintenanceMode     Boolean @default(false)
+  updatedAt           DateTime @updatedAt
+}
+
+// Per-user overrides for limits
+model UserOverride {
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  maxBooths           Int?    // null = dùng mặc định
+  maxItemsPerOrder    Int?
+  commissionRate      Float?  // custom commission
+  note                String? // admin ghi chú
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+

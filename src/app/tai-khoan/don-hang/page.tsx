@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import SiteLayout from '@/components/layout/SiteLayout';
 import {
   Box, Container, Paper, Typography, Button, Chip, Alert,
@@ -26,6 +27,7 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
 
 interface Order {
   id: string;
+  quantity: number;
   amount: number;
   fee: number;
   status: string;
@@ -54,7 +56,14 @@ export default function OrdersPage() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   
   // Dialog State
-  const [viewOrder, setViewOrder] = useState<any>(null);
+  const [viewOrder, setViewOrder] = useState<Order | null>(null);
+
+  // Dispute Dialog
+  const [disputeOrder, setDisputeOrder] = useState<Order | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeEvidence, setDisputeEvidence] = useState('');
+  const [disputeFaultyCount, setDisputeFaultyCount] = useState(1);
+  const [submittingDispute, setSubmittingDispute] = useState(false);
 
   const fetchOrders = () => {
     fetch(`/api/me/orders?userId=${user?.id}`, { cache: 'no-store' })
@@ -77,10 +86,13 @@ export default function OrdersPage() {
         body: JSON.stringify({ buyerId: user.id }),
       });
       const data = await res.json();
-      if (!res.ok) alert(data.error || 'Lỗi');
-      else fetchOrders(); // Reload list
+      if (!res.ok) toast.error(data.error || 'Lỗi');
+      else {
+        toast.success('Xác nhận nhận hàng thành công!');
+        fetchOrders();
+      }
     } catch (e) {
-      alert('Network error');
+      toast.error('Network error');
     } finally {
       setConfirmingId(null);
     }
@@ -215,7 +227,10 @@ export default function OrdersPage() {
                         </Button>
                       )}
                       {(order.status === 'HOLDING' || order.status === 'COMPLETED') && (
-                        <Button size="small" variant="outlined" color="error" sx={{ borderRadius: 1.5, fontSize: '0.75rem' }}>Khiếu nại</Button>
+                        <Button size="small" variant="outlined" color="error" onClick={() => { setDisputeOrder(order); setDisputeReason(''); setDisputeEvidence(''); setDisputeFaultyCount(1); }} sx={{ borderRadius: 1.5, fontSize: '0.75rem' }}>Khiếu nại</Button>
+                      )}
+                      {order.status === 'DISPUTED' && (
+                        <Chip label="Đang khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fee2e2', color: '#991b1b', fontSize: '0.7rem' }} />
                       )}
                     </Box>
                     
@@ -276,6 +291,83 @@ export default function OrdersPage() {
           <Button onClick={() => setViewOrder(null)} sx={{ borderRadius: 2, fontWeight: 600 }}>Đóng</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dispute dialog */}
+      <Dialog open={!!disputeOrder} onClose={() => setDisputeOrder(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          Gửi Khiếu Nại
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Đơn hàng: <strong>{disputeOrder?.id?.slice(-8).toUpperCase()}</strong>
+            <br />
+            Sản phẩm: {disputeOrder?.product?.title} {disputeOrder?.variantName && disputeOrder.variantName !== 'Kho chung' ? `- ${disputeOrder.variantName}` : ''}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <TextField
+            fullWidth multiline rows={3}
+            label="Mô tả vấn đề *"
+            placeholder="Vui lòng mô tả chi tiết vấn đề bạn gặp phải với đơn hàng này..."
+            value={disputeReason}
+            onChange={(e) => setDisputeReason(e.target.value)}
+            InputProps={{ sx: { borderRadius: 2 } }}
+          />
+          <TextField
+            fullWidth multiline rows={4}
+            label="Dán nội dung lỗi (nếu có)"
+            placeholder="Dán các tài khoản/nội dung bị lỗi vào đây, mỗi dòng 1 item..."
+            value={disputeEvidence}
+            onChange={(e) => setDisputeEvidence(e.target.value)}
+            InputProps={{ sx: { borderRadius: 2, fontFamily: 'monospace', fontSize: '0.85rem' } }}
+          />
+          <TextField
+            type="number" label="Số lượng items lỗi"
+            value={disputeFaultyCount}
+            onChange={(e) => setDisputeFaultyCount(Math.max(1, parseInt(e.target.value) || 1))}
+            InputProps={{ sx: { borderRadius: 2 }, inputProps: { min: 1, max: disputeOrder?.quantity || 999 } }}
+            sx={{ maxWidth: 200 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setDisputeOrder(null)} color="inherit" sx={{ fontWeight: 600 }}>Hủy</Button>
+          <Button
+            variant="contained" color="error" disableElevation
+            disabled={!disputeReason.trim() || submittingDispute}
+            onClick={async () => {
+              if (!user || !disputeOrder) return;
+              setSubmittingDispute(true);
+              try {
+                const res = await fetch('/api/disputes', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    orderId: disputeOrder.id,
+                    buyerId: user.id,
+                    reason: disputeReason,
+                    evidence: disputeEvidence,
+                    faultyCount: disputeFaultyCount,
+                  }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                  setDisputeOrder(null);
+                  fetchOrders();
+                  toast.success('Khiếu nại đã được gửi thành công!');
+                } else {
+                  toast.error(data.error || 'Lỗi gửi khiếu nại');
+                }
+              } catch {
+                toast.error('Lỗi kết nối');
+              } finally {
+                setSubmittingDispute(false);
+              }
+            }}
+            sx={{ fontWeight: 700, borderRadius: 2, px: 3 }}
+          >
+            {submittingDispute ? 'Đang gửi...' : 'Gửi khiếu nại'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </SiteLayout>
   );
 }
+
