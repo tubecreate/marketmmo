@@ -100,7 +100,7 @@ export default function SellerProductsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+    if (!window.confirm('Bạn có chắc muốn xóa gian hàng này?')) return;
     try {
       const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
       if (res.ok) fetchData();
@@ -115,7 +115,7 @@ export default function SellerProductsPage() {
         {/* Green Header Box */}
         <Box sx={{ bgcolor: '#16a34a', p: 3.5, borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, textTransform: 'uppercase', letterSpacing: 0.5, color: 'white' }}>Kho sản phẩm</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, textTransform: 'uppercase', letterSpacing: 0.5, color: 'white' }}>Gian hàng của tôi</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,255,255,0.15)', px: 1.5, py: 0.8, borderRadius: 1.5 }}>
               <Typography variant="caption" sx={{ color: 'white', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 💡 Mẹo: Nhận ⚙️ để quản lý giá & tồn kho, 📝 để sửa thông tin.
@@ -136,7 +136,7 @@ export default function SellerProductsPage() {
               transition: 'all 0.2s'
             }}
           >
-            THÊM SẢN PHẨM
+            TẠO GIAN HÀNG
           </Button>
         </Box>
 
@@ -154,7 +154,7 @@ export default function SellerProductsPage() {
           <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
             <TextField
               sx={{ flex: 1 }}
-              placeholder="Tìm tên sản phẩm..."
+              placeholder="Tìm gian hàng..."
               variant="outlined"
               size="small"
               value={searchTerm}
@@ -189,7 +189,7 @@ export default function SellerProductsPage() {
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f8fafc' }}>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>THAO TÁC</TableCell>
-                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>SẢN PHẨM</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>GIAN HÀNG</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>KHO GIÁ</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>TRẠNG THÁI</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>NGÀY TẠO</TableCell>
@@ -203,7 +203,7 @@ export default function SellerProductsPage() {
                 ) : filteredProducts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                      <Typography color="text.secondary">Bạn chưa có sản phẩm nào.</Typography>
+                      <Typography color="text.secondary">Bạn chưa có gian hàng nào.</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -256,7 +256,7 @@ export default function SellerProductsPage() {
                             >
                               {p.title}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>{p.variants?.length || 0} Phân loại sẵn có</Typography>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>{p.variants?.length || 0} sản phẩm sẵn có</Typography>
                           </Box>
                         </Box>
                       </TableCell>

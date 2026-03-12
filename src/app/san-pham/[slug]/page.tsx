@@ -129,7 +129,7 @@ export default function ProductDetailPage() {
         <Container maxWidth="lg">
           <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
             <MuiLink component={Link} href="/" color="inherit" sx={{ fontSize: '0.875rem' }}>Trang chủ</MuiLink>
-            <MuiLink component={Link} href="/san-pham" color="inherit" sx={{ fontSize: '0.875rem' }}>{(product.category as Record<string,string>)?.name || 'Sản phẩm'}</MuiLink>
+            <MuiLink component={Link} href="/san-pham" color="inherit" sx={{ fontSize: '0.875rem' }}>{(product.category as Record<string,string>)?.name || 'Gian hàng'}</MuiLink>
             <Typography color="text.primary" sx={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase' }}>{product.title as string}</Typography>
           </Breadcrumbs>
         </Container>
@@ -163,7 +163,7 @@ export default function ProductDetailPage() {
               onClick={() => setIsFavorite(!isFavorite)}
               sx={{ mb: 3, py: 1, borderColor: 'divider', color: 'text.secondary', bgcolor: 'white', '&:hover': { bgcolor: '#f8fafc' } }}
             >
-              {isFavorite ? 'Đã yêu thích' : 'Thêm sản phẩm yêu thích'}
+              {isFavorite ? 'Đã yêu thích' : 'Thêm gian hàng yêu thích'}
             </Button>
 
             <Box sx={{ p: 2, bgcolor: '#fefce8', border: '1px solid #fef08a', borderRadius: 2, display: 'flex', gap: 1 }}>
@@ -218,7 +218,7 @@ export default function ProductDetailPage() {
               {variants.length > 0 && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" sx={{ fontWeight: 700, color: '#64748b', mb: 1.5, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '.08em' }}>
-                    Chọn gói
+                    Chọn sản phẩm
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     {variants.map(v => {
@@ -292,7 +292,7 @@ export default function ProductDetailPage() {
                   <Box sx={{ p: 2, bgcolor: '#fefce8', borderRadius: 1, mb: 2, display: 'flex', gap: 1 }}>
                     <WarningAmberIcon sx={{ color: '#ca8a04', fontSize: 20 }} />
                     <Typography variant="body2" sx={{ color: '#854d0e' }}>
-                      Bạn cần <strong>đăng nhập</strong> để mua sản phẩm này
+                      Bạn cần <strong>đăng nhập</strong> để mua hàng
                     </Typography>
                   </Box>
                   <Button fullWidth variant="contained" size="large"
@@ -323,9 +323,9 @@ export default function ProductDetailPage() {
             </Paper>
 
             <Paper elevation={0} sx={{ p: 4, mt: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#0f172a' }}>MÔ TẢ SẢN PHẨM</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#0f172a' }}>MÔ TẢ GIAN HÀNG</Typography>
               <Typography variant="body1" sx={{ color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                {product.description as string || 'Chưa có mô tả chi tiết cho sản phẩm này.'}
+                {product.description as string || 'Chưa có mô tả chi tiết cho gian hàng này.'}
               </Typography>
             </Paper>
           </Grid>
@@ -350,11 +350,11 @@ export default function ProductDetailPage() {
         <DialogContent sx={{ pb: 3 }}>
           <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">Sản phẩm:</Typography>
+              <Typography variant="body2" color="text.secondary">Gian hàng:</Typography>
               <Typography variant="body2" sx={{ fontWeight: 700 }}>{product.title as string}</Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">Phân loại:</Typography>
+              <Typography variant="body2" color="text.secondary">Sản phẩm:</Typography>
               <Typography variant="body2" sx={{ fontWeight: 700 }}>{orderResult?.variantName as string}</Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

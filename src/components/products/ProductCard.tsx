@@ -182,7 +182,7 @@ export default function ProductCard({
               letterSpacing: 0.5,
             }}
           >
-            {isDigital ? 'SẢN PHẨM' : 'DỊCH VỤ'}
+            {isDigital ? 'GIAN HÀNG' : 'DỊCH VỤ'}
           </Box>
         </Box>
       </Box>

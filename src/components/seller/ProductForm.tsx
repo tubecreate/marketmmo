@@ -33,7 +33,7 @@ const PRODUCT_TYPES = [
   { value: 'SERVICE', label: '⚙️ Dịch vụ (Tăng follow, like...)' },
 ];
 
-const STEPS = ['Thông tin cơ bản', 'Biến thể & Giá', 'Nhập kho', 'Xác nhận'];
+const STEPS = ['Thông tin cơ bản', 'Sản phẩm & Giá', 'Nhập kho', 'Xác nhận'];
 
 export default function ProductForm({ open, onClose, onSuccess, product, sellerId }: ProductFormProps) {
   const [activeStep, setActiveStep] = useState(0);
@@ -222,7 +222,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1 }}>
-                {product ? 'Chỉnh sửa sản phẩm' : 'Đăng sản phẩm mới'}
+                {product ? 'Chỉnh sửa gian hàng' : 'Tạo gian hàng mới'}
               </Typography>
               <Typography variant="caption" color="text.secondary">Bước {activeStep + 1}/{STEPS.length}: {STEPS[activeStep]}</Typography>
             </Box>
@@ -289,7 +289,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                 />
               </Box>
               <TextField
-                fullWidth label="Tên sản phẩm *"
+                fullWidth label="Tên gian hàng *"
                 placeholder="VD: Tài khoản Netflix Premium 4K Shared"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -298,7 +298,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
               <TextField
-                select fullWidth label="Loại sản phẩm *"
+                select fullWidth label="Loại gian hàng *"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 InputProps={{ sx: { borderRadius: 2 } }}
@@ -329,7 +329,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               {[1,3,7,14,30].map(d => <MenuItem key={d} value={String(d)}>{d} ngày</MenuItem>)}
             </TextField>
             <TextField
-              fullWidth multiline rows={4} label="Mô tả sản phẩm"
+              fullWidth multiline rows={4} label="Mô tả gian hàng"
               placeholder="Cung cấp thông tin chi tiết, hướng dẫn sử dụng, chế độ bảo hành..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -338,19 +338,19 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           </Box>
         )}
 
-        {/* ─── Step 1: Biến thể & Giá ─── */}
+        {/* ─── Step 1: Sản phẩm & Giá ─── */}
         {activeStep === 1 && (
           <Box>
             <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: '#f0fdf4', borderColor: '#bbf7d0' }}>
               <Typography variant="body2" sx={{ color: '#15803d', fontSize: '0.85rem' }}>
-                💡 <strong>Biến thể</strong> cho phép bạn bán nhiều loại trong 1 sản phẩm. Ví dụ: Gmail cổ 2009-2015 (49k), Gmail trung 2016-2020 (29k), Gmail mới (9k). Mỗi biến thể có kho riêng.
+                💡 <strong>Sản phẩm</strong> cho phép bạn bán nhiều loại trong 1 gian hàng. Ví dụ: Gmail cổ 2009-2015 (49k), Gmail trung 2016-2020 (29k), Gmail mới (9k). Mỗi sản phẩm có kho riêng.
               </Typography>
             </Paper>
             {variants.map((variant, idx) => (
               <Paper key={variant.id} variant="outlined" sx={{ p: 2.5, mb: 2, borderRadius: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Chip label={`Gói ${idx + 1}`} size="small" color="primary" sx={{ fontWeight: 700, mr: 1 }} />
-                  <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>Cấu hình biến thể</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>Cấu hình sản phẩm</Typography>
                   {variants.length > 1 && (
                     <IconButton size="small" color="error" onClick={() => removeVariant(variant.id)}>
                       <DeleteOutlineIcon fontSize="small" />
@@ -388,7 +388,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               onClick={addVariant} fullWidth
               sx={{ borderRadius: 2, borderStyle: 'dashed', py: 1.5, fontWeight: 700, color: '#16a34a', borderColor: '#16a34a' }}
             >
-              Thêm biến thể mới
+              Thêm sản phẩm mới
             </Button>
           </Box>
         )}
@@ -412,7 +412,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%', pr: 1 }}>
                       <Chip label={`Gói ${idx + 1}`} size="small" color="primary" sx={{ fontWeight: 700 }} />
                       <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>
-                        {variant.name || `Biến thể ${idx + 1}`}
+                        {variant.name || `Sản phẩm ${idx + 1}`}
                         {variant.price && <span style={{ color: '#dc2626', marginLeft: 8 }}>{parseInt(variant.price).toLocaleString('vi-VN')}đ</span>}
                       </Typography>
                       {count > 0 ? (
@@ -469,7 +469,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
         {activeStep === 3 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>THÔNG TIN SẢN PHẨM</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>THÔNG TIN GIAN HÀNG</Typography>
               <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
                 {formData.thumbnail && (
                   <Box sx={{ width: 100, height: 100, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
@@ -478,7 +478,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                 )}
                 <Box sx={{ display: 'grid', gap: 1, flex: 1 }}>
                   {[
-                    { k: 'Tên sản phẩm', v: formData.title },
+                    { k: 'Tên gian hàng', v: formData.title },
                     { k: 'Loại', v: formData.type },
                     { k: 'Bảo hành', v: `${formData.warranty} ngày` },
                   ].map(row => (
@@ -491,7 +491,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               </Box>
             </Paper>
             <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>{variants.length} BIẾN THỂ</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>{variants.length} SẢN PHẨM</Typography>
               {variants.map((v, i) => (
                 <Box key={v.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.2, borderBottom: i < variants.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                   <Box>

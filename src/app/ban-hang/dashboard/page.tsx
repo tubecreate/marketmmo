@@ -163,7 +163,7 @@ export default function SellerDashboardPage() {
                 value={stats?.totalStock || 0}
                 icon={<Inventory2Icon />} 
                 color="#f59e0b"
-                subValue={`Từ ${stats?.totalProducts} sản phẩm`}
+                subValue={`Từ ${stats?.totalProducts} gian hàng`}
               />
             )}
           </Grid>
@@ -282,7 +282,7 @@ export default function SellerDashboardPage() {
           <Grid size={{ xs: 12, md: 6 }}>
             <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid #e2e8f0', height: '100%' }}>
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#1e293b' }}>Sản phẩm mới</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#1e293b' }}>Gian hàng mới</Typography>
                 <Button 
                   size="small"
                   onClick={() => router.push('/ban-hang')}
@@ -295,7 +295,7 @@ export default function SellerDashboardPage() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {loading ? [1, 2, 3].map(i => <Skeleton key={i} height={60} sx={{ borderRadius: 2 }} />) : 
                  stats?.recentProducts?.length === 0 ? (
-                   <Typography variant="caption" sx={{ color: '#94a3b8', py: 2, display: 'block', textAlign: 'center' }}>Chưa có sản phẩm.</Typography>
+                   <Typography variant="caption" sx={{ color: '#94a3b8', py: 2, display: 'block', textAlign: 'center' }}>Chưa có gian hàng.</Typography>
                  ) : (
                   stats?.recentProducts.slice(0, 4).map((p) => (
                     <Box key={p.id} sx={{ 

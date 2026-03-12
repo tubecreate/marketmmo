@@ -9,7 +9,7 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const productCategories = [
-  { label: 'Tất cả sản phẩm', href: '/san-pham' },
+  { label: 'Tất cả gian hàng', href: '/san-pham' },
   { label: 'Tài khoản', href: '/san-pham/tai-khoan' },
   { label: 'Key phần mềm', href: '/san-pham/key-phan-mem' },
   { label: 'File & Tool', href: '/san-pham/file-tool' },
@@ -38,7 +38,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Trang chủ', href: '/' },
-  { label: 'Sản phẩm', children: productCategories },
+  { label: 'Gian hàng', children: productCategories },
   { label: 'Dịch vụ', children: serviceCategories },
   { label: 'Nạp tiền', children: depositItems },
   { label: 'Đơn Hàng', href: '/tai-khoan/don-hang' },

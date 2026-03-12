@@ -22,8 +22,8 @@ export async function POST(req: Request) {
     ]);
 
     if (!buyer || !buyer.isActive) return NextResponse.json({ error: 'Tài khoản không hợp lệ' }, { status: 403 });
-    if (!product || product.status !== 'ACTIVE') return NextResponse.json({ error: 'Sản phẩm không khả dụng' }, { status: 400 });
-    if (buyer.id === product.sellerId) return NextResponse.json({ error: 'Không thể mua sản phẩm của chính mình' }, { status: 400 });
+    if (!product || product.status !== 'ACTIVE') return NextResponse.json({ error: 'Gian hàng không khả dụng' }, { status: 400 });
+    if (buyer.id === product.sellerId) return NextResponse.json({ error: 'Không thể mua hàng từ gian hàng của chính mình' }, { status: 400 });
 
     // 2. Lock available stock items (FIFO) for the selected variant
     const availableItems = await prisma.productItem.findMany({

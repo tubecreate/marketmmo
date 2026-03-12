@@ -185,7 +185,7 @@ export default function OrdersPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="body1" sx={{ fontWeight: 700, mb: 0.5, color: '#1e293b' }}>
-                        {order.product?.title ?? 'Sản phẩm'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
+                        {order.product?.title ?? 'Gian hàng'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                         Mã đơn: #{order.id.slice(0, 8)} · Người bán: @{order.seller?.username ?? 'n/a'} · {new Date(order.createdAt).toLocaleDateString('vi-VN')}

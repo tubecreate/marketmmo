@@ -22,7 +22,7 @@ const banners = [
     title: 'MUA BÁN AN TOÀN',
     subtitle: 'Cơ chế ESCROW bảo vệ 100%',
     desc: 'Tiền được tạm giữ 03 ngày bảo hành',
-    cta: 'Xem sản phẩm',
+    cta: 'Xem gian hàng',
     emoji: '🔒',
   },
   {
@@ -61,7 +61,7 @@ const serviceCategories = [
 
 const stats = [
   { label: 'Người dùng', value: '15,000+', icon: <GroupsIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
-  { label: 'Sản phẩm', value: '850+', icon: <BoltIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
+  { label: 'Gian hàng', value: '850+', icon: <BoltIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
   { label: 'Giao dịch thành công', value: '50,000+', icon: <VerifiedUserIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
   { label: 'Hỗ trợ 24/7', value: 'AI + Agent', icon: <SupportAgentIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
 ];
@@ -246,7 +246,7 @@ export default function HomePage() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <WhatshotIcon sx={{ color: '#ef4444', fontSize: 22 }} />
               <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>
-                Sản phẩm nổi bật
+                Gian hàng nổi bật
               </Typography>
             </Box>
             <Button
@@ -282,7 +282,7 @@ export default function HomePage() {
             <Box sx={{ display: 'flex', gap: 1 }}>
               {[
                 { label: 'TẤT CẢ', val: 0 },
-                { label: 'SẢN PHẨM', val: 1 },
+                { label: 'GIAN HÀNG', val: 1 },
                 { label: 'DỊCH VỤ', val: 2 },
               ].map((t) => (
                 <Button
@@ -342,10 +342,10 @@ export default function HomePage() {
             }}
           >
             <Typography variant="subtitle2" sx={{ color: 'white', fontWeight: 700, fontSize: '0.85rem' }}>
-              📋 DANH SÁCH SẢN PHẨM
+              📋 DANH SÁCH GIAN HÀNG
             </Typography>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-              Tìm thấy {displayedProducts.length} sản phẩm
+              Tìm thấy {displayedProducts.length} gian hàng
             </Typography>
           </Box>
 

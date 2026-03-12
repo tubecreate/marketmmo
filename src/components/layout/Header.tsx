@@ -112,7 +112,7 @@ export default function Header() {
           >
             <SearchIcon sx={{ color: '#94a3b8', fontSize: 20, mr: 1, flexShrink: 0 }} />
             <InputBase
-              placeholder="Tìm sản phẩm hoặc người bán..."
+              placeholder="Tìm gian hàng hoặc người bán..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ flex: 1, fontSize: '0.875rem', color: 'text.primary' }}
