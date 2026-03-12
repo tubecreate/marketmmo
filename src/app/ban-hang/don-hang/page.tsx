@@ -11,7 +11,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SellerLayout from '@/components/layout/SellerLayout';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation'; // Removed unused router
 
 const STATUS_TABS = [
   { label: 'Tất cả', value: 'all' },
@@ -22,7 +22,7 @@ const STATUS_TABS = [
 ];
 
 export default function SellerOrdersPage() {
-  const router = useRouter();
+  // const router = useRouter(); // Removed unused router
   const { user } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,9 +197,7 @@ export default function SellerOrdersPage() {
           </TableContainer>
         </Paper>
 
-        <Box sx={{ mt: 5, textAlign: 'center', pb: 5 }}>
-           <Typography variant="caption" color="text.secondary">© 2026 SHOPMINI.NET - Quản Lý Đơn Hàng</Typography>
-        </Box>
+
       </Box>
     </SellerLayout>
   );

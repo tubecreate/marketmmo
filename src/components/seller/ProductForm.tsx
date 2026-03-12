@@ -465,7 +465,11 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
             variant="contained" disableElevation
             onClick={() => setActiveStep(s => s + 1)}
             disabled={!canProceed()}
-            sx={{ fontWeight: 800, borderRadius: 2, px: 3 }}
+            sx={{ 
+              fontWeight: 800, borderRadius: 2, px: 3,
+              bgcolor: '#16a34a !important', color: 'white !important',
+              '&:hover': { bgcolor: '#15803d !important' }
+            }}
           >
             Tiếp theo →
           </Button>
@@ -473,7 +477,11 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           <Button
             variant="contained" disableElevation onClick={handleSubmit}
             disabled={loading}
-            sx={{ fontWeight: 800, px: 4, borderRadius: 2, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}
+            sx={{ 
+              fontWeight: 800, px: 4, borderRadius: 2, 
+              bgcolor: '#16a34a !important', color: 'white !important',
+              '&:hover': { bgcolor: '#15803d !important' } 
+            }}
           >
             {loading ? <CircularProgress size={20} color="inherit" /> : '🚀 Đăng ngay'}
           </Button>

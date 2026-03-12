@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import {
   Box, Container, Button, Menu, MenuItem, alpha,
 } from '@mui/material';
@@ -112,6 +113,9 @@ function DropdownNavItem({ item }: { item: NavItem }) {
 
 export default function MainNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const isSeller = user?.role === 'SELLER' || user?.role === 'ADMIN';
 
   return (
     <Box
@@ -144,7 +148,7 @@ export default function MainNav() {
               <Button
                 key={item.label}
                 component={Link}
-                href={item.href || '/'}
+                href={item.highlight && isSeller ? '/ban-hang/dashboard' : (item.href || '/')}
                 disableElevation
                 sx={{
                   px: 2,
@@ -160,7 +164,7 @@ export default function MainNav() {
                   '&:hover': { bgcolor: '#15803d' },
                 }}
               >
-                {item.label}
+                {item.highlight && isSeller ? 'Quản Lý Gian Hàng' : item.label}
               </Button>
             ) : (
               <Button

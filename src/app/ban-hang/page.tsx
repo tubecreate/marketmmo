@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import SellerLayout from '@/components/layout/SellerLayout';
 import {
@@ -19,19 +19,31 @@ import Link from 'next/link';
 import ProductForm from '@/components/seller/ProductForm';
 import StockManager from '@/components/seller/StockManager';
 
+interface Product {
+  id: string;
+  title: string;
+  slug: string;
+  price: number;
+  priceMax?: number;
+  status: string;
+  createdAt: string;
+  thumbnail?: string;
+  variants?: any[];
+}
+
 export default function SellerProductsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   // UI State
   const [formOpen, setFormOpen] = useState(false);
   const [stockOpen, setStockOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const stored = localStorage.getItem('mmo_user');
@@ -46,7 +58,7 @@ export default function SellerProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) {
@@ -66,13 +78,13 @@ export default function SellerProductsPage() {
       });
     }
     fetchData();
-  }, [user, router]);
+  }, [user, router, fetchData]);
 
   const filteredProducts = products.filter(p => 
     p.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => {
     setSelectedProduct(product);
     setFormOpen(true);
   };
@@ -82,7 +94,7 @@ export default function SellerProductsPage() {
     setFormOpen(true);
   };
 
-  const handleManageStock = (product: any) => {
+  const handleManageStock = (product: Product) => {
     setSelectedProduct(product);
     setStockOpen(true);
   };
@@ -111,13 +123,17 @@ export default function SellerProductsPage() {
             </Box>
           </Box>
           <Button
-            variant="contained" disableElevation
+            variant="contained"
+            disableElevation
             startIcon={<AddIcon sx={{ fontSize: '18px !important' }} />}
             onClick={handleAdd}
             sx={{ 
-              borderRadius: 2, fontWeight: 900, px: 2, py: 1, 
-              bgcolor: 'white', color: '#16a34a', fontSize: '0.75rem',
-              '&:hover': { bgcolor: '#f1f5f9' } 
+              borderRadius: 1.5, fontWeight: 700, px: 2, py: 0.8, 
+              bgcolor: 'rgba(255,255,255,0.15) !important', color: 'white !important', 
+              fontSize: '0.75rem',
+              border: '1px solid rgba(255,255,255,0.2)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.25) !important' },
+              transition: 'all 0.2s'
             }}
           >
             THÊM SẢN PHẨM
@@ -170,13 +186,13 @@ export default function SellerProductsPage() {
 
           <TableContainer>
             <Table sx={{ minWidth: 650 }}>
-              <TableHead sx={{ bgcolor: '#f0fdf4' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700, colSpan: 1, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>THAO TÁC</TableCell>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>SẢN PHẨM</TableCell>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>KHO GIÁ</TableCell>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>TRẠNG THÁI</TableCell>
-                  <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.5, color: '#94a3b8' }}>NGÀY TẠO</TableCell>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>THAO TÁC</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>SẢN PHẨM</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>KHO GIÁ</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>TRẠNG THÁI</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', py: 2, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>NGÀY TẠO</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -278,9 +294,7 @@ export default function SellerProductsPage() {
 
         {/* Balance Status (Repositioned or stylized if needed, but the user image doesn't show it in the same box) */}
         {/* We can keep it below or in the sidebar later */}
-        <Box sx={{ mt: 10, textAlign: 'center' }}>
-           <Typography variant="caption" color="text.secondary">© 2026 SHOPMINI.NET - Trang Người Bán</Typography>
-        </Box>
+
         
         {/* Dialogs */}
         {user && (
@@ -288,7 +302,7 @@ export default function SellerProductsPage() {
             open={formOpen}
             onClose={() => setFormOpen(false)}
             onSuccess={fetchData}
-            product={selectedProduct}
+            product={selectedProduct as any}
             sellerId={user.id}
           />
         )}
