@@ -37,6 +37,7 @@ export default function StockManager({ open, onClose, productId, productTitle }:
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([]);
+  const [currentDuplicates, setCurrentDuplicates] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -86,6 +87,7 @@ export default function StockManager({ open, onClose, productId, productTitle }:
     setUploading(true);
     setError('');
     setSuccess('');
+    setCurrentDuplicates(0);
 
     try {
       const text = await file.text();
@@ -139,7 +141,8 @@ export default function StockManager({ open, onClose, productId, productTitle }:
           timestamp: new Date().toLocaleString('vi-VN'),
         };
         setUploadHistory(prev => [record, ...prev]);
-        setSuccess(`Thêm thành công ${validLines.length} tài khoản.${duplicateCount > 0 ? ` (${duplicateCount} trùng lặp đã bỏ qua)` : ''}`);
+        setSuccess(`Thêm thành công ${validLines.length} tài khoản.`);
+        setCurrentDuplicates(duplicateCount);
         await loadData();
       } else {
         setError(data.error || 'Lỗi khi nạp kho');
@@ -270,8 +273,13 @@ export default function StockManager({ open, onClose, productId, productTitle }:
 
               {/* Success/Error alerts */}
               {success && (
-                <Alert severity="success" icon={<CheckCircleIcon />} sx={{ mb: 2, borderRadius: 2, fontWeight: 600 }} onClose={() => setSuccess('')}>
+                <Alert severity="success" icon={<CheckCircleIcon />} sx={{ mb: currentDuplicates > 0 ? 1 : 2, borderRadius: 2, fontWeight: 600 }} onClose={() => setSuccess('')}>
                   {success}
+                </Alert>
+              )}
+              {currentDuplicates > 0 && (
+                <Alert severity="error" sx={{ mb: 2, borderRadius: 2, fontWeight: 600 }} onClose={() => setCurrentDuplicates(0)}>
+                  Bỏ qua {currentDuplicates} tài khoản bị trùng lặp.
                 </Alert>
               )}
               {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}

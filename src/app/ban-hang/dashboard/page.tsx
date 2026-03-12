@@ -85,7 +85,7 @@ export default function SellerDashboardPage() {
         bgcolor: alpha(color, 0.1), color: color,
         display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
-        {React.cloneElement(icon, { sx: { fontSize: 24 } })}
+        {React.cloneElement(icon, { sx: { fontSize: 24 } } as any)}
       </Box>
       <Box>
         <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.65rem' }}>{title}</Typography>

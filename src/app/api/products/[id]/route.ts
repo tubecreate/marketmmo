@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { sendSystemMessage } from '@/lib/chat';
 
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -48,6 +49,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         thumbnail: data.thumbnail,
       }
     });
+
+    if (data.status === 'ACTIVE') {
+      await sendSystemMessage(updated.sellerId, `✅ Tuyệt vời! Gian hàng "${updated.title}" của bạn đã được duyệt và đang hiển thị trên sàn.`);
+    } else if (data.status === 'REJECTED') {
+      await sendSystemMessage(updated.sellerId, `❌ Rất tiếc, gian hàng "${updated.title}" của bạn đã bị từ chối duyệt. Vui lòng kiểm tra lại thông tin.`);
+    }
 
     return NextResponse.json({ success: true, product: updated });
   } catch {

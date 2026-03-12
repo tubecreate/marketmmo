@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
   { label: 'Dịch vụ', children: serviceCategories },
   { label: 'Nạp tiền', children: depositItems },
   { label: 'Đơn Hàng', href: '/tai-khoan/don-hang' },
+  { label: 'Nhắn tin', href: '/user_chat' },
   { label: 'Lấy 2FA', href: '/tai-khoan/lay-2fa' },
   { label: 'Kiếm tiền', href: '/tai-khoan/kiem-tien' },
   { label: 'Diễn đàn', href: '/dien-dan' },

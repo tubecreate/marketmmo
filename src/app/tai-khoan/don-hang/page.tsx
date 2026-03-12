@@ -1,12 +1,12 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import SiteLayout from '@/components/layout/SiteLayout';
 import {
   Box, Container, Paper, Typography, Button, Chip, Alert,
-  TextField, InputAdornment, alpha, Grid, Divider, Select, MenuItem, FormControl,
-  Skeleton, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, IconButton
+  TextField, InputAdornment, Grid, Select, MenuItem, FormControl,
+  Skeleton, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import SearchIcon from '@mui/icons-material/Search';
@@ -18,6 +18,8 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useAuth } from '@/context/AuthContext';
+import ConfirmModal from '@/components/common/ConfirmModal';
+
 
 const statusMap: Record<string, { label: string; color: string; bg: string }> = {
   HOLDING:   { label: 'Tạm giữ',    color: '#d97706', bg: '#fef3c7' },
@@ -43,6 +45,7 @@ interface Order {
     thumbnail: string | null;
   };
   seller?: {
+    id: string;
     username: string;
   };
   dispute?: {
@@ -69,39 +72,60 @@ export default function OrdersPage() {
   const [disputeEvidence, setDisputeEvidence] = useState('');
   const [disputeFaultyCount, setDisputeFaultyCount] = useState(1);
   const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const fetchOrders = () => {
-    fetch(`/api/me/orders?userId=${user?.id}`, { cache: 'no-store' })
+  // Global Confirm State
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'success' | 'info';
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'info'
+  });
+
+  const fetchOrders = useCallback(() => {
+    if (!user?.id) return;
+    fetch(`/api/me/orders?userId=${user.id}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => { setOrders(Array.isArray(data) ? data : []); setLoading(false); });
-  };
+  }, [user?.id]);
 
-  useEffect(() => {
-    if (!localStorage.getItem('mmo_user')) { router.push('/dang-nhap'); return; }
-    if (user?.id) fetchOrders();
-  }, [router, user?.id]);
-
-  const handleConfirm = async (orderId: string) => {
-    if (!user || !confirm('Xác nhận bạn đã kiểm tra và nhận đủ tài khoản?\nTiền sẽ được cộng cho người bán ngay lập tức!')) return;
-    setConfirmingId(orderId);
-    try {
-      const res = await fetch(`/api/orders/${orderId}/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyerId: user.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) toast.error(data.error || 'Lỗi');
-      else {
-        toast.success('Xác nhận nhận hàng thành công!');
-        fetchOrders();
+  const handleConfirm = useCallback(async (orderId: string) => {
+    if (!user) return;
+    setConfirmState({
+      open: true,
+      title: 'Xác nhận nhận hàng',
+      message: 'Xác nhận bạn đã kiểm tra và nhận đủ tài khoản? Tiền sẽ được cộng cho người bán ngay lập tức!',
+      variant: 'success',
+      onConfirm: async () => {
+        setConfirmState(prev => ({ ...prev, open: false }));
+        setConfirmingId(orderId);
+        try {
+          const res = await fetch(`/api/orders/${orderId}/confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buyerId: user.id }),
+          });
+          const data = await res.json();
+          if (!res.ok) toast.error(data.error || 'Lỗi');
+          else {
+            toast.success('Xác nhận nhận hàng thành công!');
+            fetchOrders();
+          }
+        } catch {
+          toast.error('Network error');
+        } finally {
+          setConfirmingId(null);
+        }
       }
-    } catch (e) {
-      toast.error('Network error');
-    } finally {
-      setConfirmingId(null);
-    }
-  };
+    });
+  }, [user, fetchOrders]);
 
   const handleDownload = (content: string, orderId: string) => {
     const element = document.createElement('a');
@@ -112,6 +136,66 @@ export default function OrdersPage() {
     element.click();
     document.body.removeChild(element);
   };
+
+  const handleCancelDispute = useCallback(async (orderId: string) => {
+    if (!user) return;
+    setConfirmState({
+      open: true,
+      title: 'Hủy khiếu nại',
+      message: 'Bạn có chắc chắn muốn huỷ khiếu nại này không? Đơn hàng sẽ trở lại trạng thái bình thường.',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmState(prev => ({ ...prev, open: false }));
+        setCancellingId(orderId);
+        try {
+          const res = await fetch(`/api/disputes/${orderId}/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buyerId: user.id }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success('Đã huỷ khiếu nại thành công!');
+            fetchOrders();
+          } else {
+            toast.error(data.error || 'Lỗi khi huỷ');
+          }
+        } catch {
+          toast.error('Lỗi kết nối');
+        } finally {
+          setCancellingId(null);
+        }
+      }
+    });
+  }, [user, fetchOrders]);
+
+  // 1. Initial fetch
+  useEffect(() => {
+    if (!localStorage.getItem('mmo_user')) { router.push('/dang-nhap'); return; }
+    if (user?.id) fetchOrders();
+  }, [user?.id, fetchOrders, router]);
+
+  // 2. Deep-linking logic
+  useEffect(() => {
+    if (orders.length === 0) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get('q');
+    const openDispute = urlParams.get('openDispute') === 'true';
+    const cancelDispute = urlParams.get('cancelDispute') === 'true';
+    
+    if (q) {
+      setSearch(q);
+      const order = orders.find(o => o.id.toLowerCase().includes(q.toLowerCase()));
+      if (order) {
+        if (openDispute && (order.status === 'HOLDING' || order.status === 'COMPLETED') && disputeOrder?.id !== order.id) {
+          setDisputeOrder(order);
+        } else if (cancelDispute && order.status === 'DISPUTED' && cancellingId !== order.id) {
+          handleCancelDispute(order.id);
+        }
+      }
+    }
+  }, [orders, disputeOrder?.id, cancellingId, handleCancelDispute]);
 
   const filtered = orders.filter(o => {
     const matchSearch = !search || o.product?.title?.toLowerCase().includes(search.toLowerCase()) || o.id.includes(search);
@@ -160,12 +244,12 @@ export default function OrdersPage() {
         {/* Search & Filter */}
         <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 2.5, border: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <TextField placeholder="Nhập mã đơn, tên SP..." value={search} onChange={(e) => setSearch(e.target.value)} size="small"
+            <TextField placeholder="Nhập mã đơn, tên SP..." value={search} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)} size="small"
               sx={{ flex: 1, minWidth: 200 }}
               InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment> }}
             />
             <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <Select value={statusFilter} onChange={(e: { target: { value: string } }) => setStatusFilter(e.target.value)}>
                 <MenuItem value="all">Tất cả trạng thái</MenuItem>
                 <MenuItem value="HOLDING">Tạm giữ</MenuItem>
                 <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
@@ -205,7 +289,20 @@ export default function OrdersPage() {
                         {order.product?.title ?? 'Gian hàng'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        Mã đơn: #{order.id.slice(0, 8)} · Người bán: @{order.seller?.username ?? 'n/a'} · {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                        Mã đơn: #{order.id.slice(0, 8)} · Người bán:{' '}
+                        <Box component="span" 
+                          onClick={(e: React.MouseEvent) => { 
+                            e.stopPropagation(); 
+                            if (order.seller?.id) {
+                              const text = encodeURIComponent(order.product?.title || 'đơn hàng');
+                              window.location.href = `/user_chat?userId=${order.seller.id}&orderId=${order.id}&title=${text}`;
+                            }
+                          }} 
+                          sx={{ color: order.seller?.id ? '#2563eb' : 'inherit', cursor: order.seller?.id ? 'pointer' : 'default', textDecoration: order.seller?.id ? 'underline' : 'none', fontWeight: 600 }}
+                        >
+                          @{order.seller?.username ?? 'n/a'}
+                        </Box>
+                        {' '}· {new Date(order.createdAt).toLocaleDateString('vi-VN')}
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
@@ -240,7 +337,17 @@ export default function OrdersPage() {
                         </Button>
                       )}
                       {order.status === 'DISPUTED' && (!order.dispute || order.dispute.status !== 'ESCALATED') && (
-                        <Chip label="Đang khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fee2e2', color: '#991b1b', fontSize: '0.7rem' }} />
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Chip label="Đang khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fee2e2', color: '#991b1b', fontSize: '0.7rem' }} />
+                          <Button 
+                            size="small" variant="text" color="error" 
+                            disabled={cancellingId === order.id}
+                            onClick={() => handleCancelDispute(order.id)}
+                            sx={{ fontSize: '0.7rem', fontWeight: 800, textDecoration: 'underline' }}
+                          >
+                            {cancellingId === order.id ? 'Đang huỷ...' : 'Huỷ khiếu nại'}
+                          </Button>
+                        </Box>
                       )}
                     </Box>
                     
@@ -277,7 +384,7 @@ export default function OrdersPage() {
               color="success"
               disableElevation
               startIcon={<DownloadIcon />}
-              onClick={() => handleDownload(viewOrder.deliveredContent, viewOrder.id)}
+              onClick={() => handleDownload(viewOrder.deliveredContent || '', viewOrder.id)}
               sx={{ borderRadius: 2 }}
             >
               Tải TXT
@@ -318,7 +425,7 @@ export default function OrdersPage() {
             label="Mô tả vấn đề *"
             placeholder="Vui lòng mô tả chi tiết vấn đề bạn gặp phải với đơn hàng này..."
             value={disputeReason}
-            onChange={(e) => setDisputeReason(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisputeReason(e.target.value)}
             InputProps={{ sx: { borderRadius: 2 } }}
           />
           <TextField
@@ -326,13 +433,13 @@ export default function OrdersPage() {
             label="Dán nội dung lỗi (nếu có)"
             placeholder="Dán các tài khoản/nội dung bị lỗi vào đây, mỗi dòng 1 item..."
             value={disputeEvidence}
-            onChange={(e) => setDisputeEvidence(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisputeEvidence(e.target.value)}
             InputProps={{ sx: { borderRadius: 2, fontFamily: 'monospace', fontSize: '0.85rem' } }}
           />
           <TextField
             type="number" label="Số lượng items lỗi"
             value={disputeFaultyCount}
-            onChange={(e) => setDisputeFaultyCount(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisputeFaultyCount(Math.max(1, parseInt(e.target.value) || 1))}
             InputProps={{ sx: { borderRadius: 2 }, inputProps: { min: 1, max: disputeOrder?.quantity || 999 } }}
             sx={{ maxWidth: 200 }}
           />
@@ -377,7 +484,16 @@ export default function OrdersPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmModal
+        open={confirmState.open}
+        onClose={() => setConfirmState(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmState.onConfirm}
+        title={confirmState.title}
+        message={confirmState.message}
+        variant={confirmState.variant}
+        loading={confirmingId !== null || cancellingId !== null}
+      />
     </SiteLayout>
   );
 }
-

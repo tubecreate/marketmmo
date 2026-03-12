@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const userId = searchParams.get('userId');
   const status = searchParams.get('status');
 
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!userId || userId === 'undefined') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const where: Record<string, unknown> = { buyerId: userId };
   if (status && status !== 'all') where.status = status;
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     where,
     include: {
       product: { select: { title: true, slug: true, type: true, thumbnail: true } },
-      seller: { select: { username: true } },
+      seller: { select: { id: true, username: true } },
       dispute: { select: { id: true, status: true } },
     },
     orderBy: { createdAt: 'desc' },

@@ -18,6 +18,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import AddCardIcon from '@mui/icons-material/AddCard';
 import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
 import KeyIcon from '@mui/icons-material/Key';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -141,11 +142,13 @@ export default function Header() {
             {user ? (
               <>
                 <Tooltip title="Chat">
-                  <IconButton size="medium" sx={{ color: '#475569' }}>
-                    <Badge badgeContent={2} color="primary">
-                      <ChatBubbleOutlineIcon sx={{ fontSize: 22 }} />
-                    </Badge>
-                  </IconButton>
+                  <Link href="/user_chat" style={{ color: 'inherit' }}>
+                    <IconButton size="medium" sx={{ color: '#475569' }}>
+                      <Badge color="primary" variant="dot">
+                        <ChatBubbleOutlineIcon sx={{ fontSize: 22 }} />
+                      </Badge>
+                    </IconButton>
+                  </Link>
                 </Tooltip>
 
                 <Tooltip title="Giỏ hàng">
@@ -262,6 +265,19 @@ export default function Header() {
                   >
                     <LogoutIcon fontSize="small" /> Đăng xuất
                   </MenuItem>
+                  {user.role === 'ADMIN' && (
+                    <>
+                      <Divider />
+                      <MenuItem
+                        component={Link}
+                        href="/admin/settings"
+                        onClick={() => setAnchorEl(null)}
+                        sx={{ gap: 1.5, py: 1, color: '#0f172a', fontWeight: 600, fontSize: '0.875rem' }}
+                      >
+                        <AdminPanelSettingsIcon fontSize="small" sx={{ color: '#475569' }} /> Admin Panel
+                      </MenuItem>
+                    </>
+                  )}
                 </Menu>
               </>
             ) : (

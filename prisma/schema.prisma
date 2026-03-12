@@ -36,9 +36,10 @@ model User {
   buyerOrders   Order[]   @relation("BuyerOrders")
   sellerOrders  Order[]   @relation("SellerOrders")
   transactions  Transaction[]
+  affiliateLinks AffiliateLink[]
+  chatRooms     ChatParticipant[]
   chatLogs      ChatLog[]
   coupons       Coupon[]
-  affiliateLinks AffiliateLink[]
 }
 
 model Category {
@@ -258,3 +259,34 @@ model UserOverride {
   updatedAt           DateTime @updatedAt
 }
 
+model ChatRoom {
+  id            String        @id @default(cuid())
+  isGroup       Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  participants  ChatParticipant[]
+  messages      ChatMessage[]
+}
+
+model ChatParticipant {
+  id         String   @id @default(cuid())
+  roomId     String
+  userId     String   // Liên kết với User.id (hoặc 'SYSTEM_BOT')
+  lastRead   DateTime @default(now())
+  joinedAt   DateTime @default(now())
+  
+  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  roomId     String
+  senderId   String   // Liên kết với User.id (hoặc 'SYSTEM_BOT')
+  content    String
+  createdAt  DateTime @default(now())
+  isSystem   Boolean  @default(false) // Đánh dấu tin nhắn hệ thống
+  
+  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}

@@ -37,7 +37,9 @@ export default function DisputeChatPage() {
     if (!disputeId) return;
     try {
       const [dRes, mRes] = await Promise.all([
-        fetch(`/api/disputes?sellerId=${user?.id}`),
+        user?.role === 'ADMIN' 
+          ? fetch('/api/admin/disputes') 
+          : fetch(`/api/disputes?sellerId=${user?.id}`),
         fetch(`/api/disputes/${disputeId}/messages`),
       ]);
       const dData = await dRes.json();
@@ -48,7 +50,7 @@ export default function DisputeChatPage() {
     } catch { /* ignore */ } finally {
       setLoading(false);
     }
-  }, [disputeId, user?.id]);
+  }, [disputeId, user?.id, user?.role]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
@@ -105,7 +107,7 @@ export default function DisputeChatPage() {
         <Paper sx={{ p: 2.5, mb: 0, borderRadius: '12px 12px 0 0', background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', color: 'white' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
-              <Button startIcon={<ArrowBackIcon />} onClick={() => router.push('/ban-hang/khieu-nai')}
+              <Button startIcon={<ArrowBackIcon />} onClick={() => router.push(user?.role === 'ADMIN' ? '/admin/disputes' : '/ban-hang/khieu-nai')}
                 sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600, mb: 0.5, fontSize: '0.75rem' }}>Quay lại</Button>
               <Typography variant="h6" sx={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <GavelIcon /> Phiên Tranh Chấp

@@ -12,8 +12,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     });
 
     return NextResponse.json({ messages });
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[API] Fetch dispute messages error:', error);
+    return NextResponse.json({ error: 'Failed to fetch messages', details: error.message }, { status: 500 });
   }
 }
 
@@ -44,7 +45,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     return NextResponse.json({ success: true, message: msg });
-  } catch {
-    return NextResponse.json({ error: 'Lỗi gửi tin nhắn' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[API] POST dispute message error:', error);
+    return NextResponse.json({ error: 'Lỗi gửi tin nhắn', details: error.message }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { sendSystemMessage } from '@/lib/chat';
 
 // POST /api/disputes/[id]/resolve
 // Body: { resolution: 'REFUND' | 'WARRANTY' | 'DISPUTE', sellerId, sellerReply? }
@@ -129,7 +130,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           where: { id: disputeId },
           data: { status: 'ESCALATED', resolution: 'DISPUTE', sellerReply },
         }),
-        // Create initial system message
+        // Create initial system message in dispute room
         prisma.disputeMessage.create({
           data: {
             disputeId,
@@ -139,6 +140,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           },
         }),
       ]);
+
+      // Notify via Chatbot with direct links
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const orderShortId = order.id.slice(-8).toUpperCase();
+        
+        // Link cho Buyer
+        const buyerDisputeLink = `${baseUrl}/tai-khoan/khieu-nai/${disputeId}`;
+        await sendSystemMessage(
+          order.buyerId,
+          `⚖️ Khiếu nại đơn hàng #${orderShortId} đã được chuyển thành TRANH CHẤP.\nAdmin đã tham gia vào phòng hỗ trợ.\n\n🔗 Vào phòng tranh chấp: ${buyerDisputeLink}`
+        );
+
+        // Link cho Seller
+        const sellerDisputeLink = `${baseUrl}/ban-hang/khieu-nai/${disputeId}`;
+        await sendSystemMessage(
+          order.sellerId,
+          `⚖️ Đơn hàng #${orderShortId} đã được chuyển sang trạng thái TRANH CHẤP.\n\n🔗 Vào phòng tranh chấp: ${sellerDisputeLink}`
+        );
+      } catch (e) {
+        console.error('Failed to notify users about escalation', e);
+      }
 
       return NextResponse.json({ success: true, resolution: 'DISPUTE' });
     }

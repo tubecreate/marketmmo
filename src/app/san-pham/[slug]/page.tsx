@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import SiteLayout from '@/components/layout/SiteLayout';
 import {
   Box, Container, Grid, Paper, Typography, Button, Chip,
@@ -377,7 +378,7 @@ export default function ProductDetailPage() {
               startIcon={<ContentCopyIcon fontSize="small" />}
               onClick={() => {
                 navigator.clipboard.writeText(orderResult?.deliveredContent as string);
-                alert('Đã sao chép vào bộ nhớ tạm');
+                toast.success('Đã sao chép vào bộ nhớ tạm');
               }}
               sx={{ textTransform: 'none', fontWeight: 600, color: '#0284c7' }}
             >

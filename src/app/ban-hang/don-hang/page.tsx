@@ -7,6 +7,7 @@ import {
   Skeleton, IconButton, Button, Dialog, DialogTitle,
   DialogContent, DialogActions, Divider, alpha
 } from '@mui/material';
+import { toast } from 'sonner';
 import SearchIcon from '@mui/icons-material/Search';
 // import VisibilityIcon from '@mui/icons-material/Visibility';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -29,7 +30,7 @@ const STATUS_TABS = [
 export default function SellerOrdersPage() {
   // const router = useRouter(); // Removed unused router
   const { user } = useAuth();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]); // Using any intentionally for high-speed development of complex joined objects
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,6 +61,9 @@ export default function SellerOrdersPage() {
   }, [user, tabValue]);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get('q');
+    if (q) setSearchTerm(q);
     fetchOrders();
   }, [fetchOrders]);
 
@@ -171,7 +175,13 @@ export default function SellerOrdersPage() {
                     <TableRow key={order.id} hover sx={{ '& td': { borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', px: 1, py: 1 } }}>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0 }}>
-                          <IconButton size="small" color="primary" sx={{ p: 0.2 }}>
+                          <IconButton 
+                            size="small" 
+                            color="primary" 
+                            sx={{ p: 0.2 }}
+                            onClick={() => window.location.href = `/user_chat?userId=${order.buyer?.id}`}
+                            disabled={!order.buyer?.id}
+                          >
                             <ChatBubbleOutlineIcon sx={{ fontSize: 16 }} />
                           </IconButton>
                           <IconButton size="small" color="success" sx={{ p: 0.2 }}>
@@ -190,8 +200,11 @@ export default function SellerOrdersPage() {
                           {new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', color: '#334155' }}>{order.buyer?.username}</Typography>
+                      <TableCell 
+                        onClick={() => { if (order.buyer?.id) window.location.href = `/user_chat?userId=${order.buyer?.id}`; }}
+                        sx={{ cursor: order.buyer?.id ? 'pointer' : 'default', '&:hover': { bgcolor: order.buyer?.id ? alpha('#2563eb', 0.05) : 'transparent' } }}
+                      >
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', color: order.buyer?.id ? '#2563eb' : '#334155', textDecoration: order.buyer?.id ? 'underline' : 'none', fontWeight: order.buyer?.id ? 600 : 400 }}>{order.buyer?.username}</Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontSize: '0.75rem', color: '#2563eb', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -304,7 +317,7 @@ export default function SellerOrdersPage() {
                     size="small" 
                     onClick={() => {
                       navigator.clipboard.writeText(selectedOrder.deliveredContent || '');
-                      alert('Đã sao chép nội dung!');
+                      toast.success('Đã sao chép nội dung!');
                     }}
                     sx={{ textTransform: 'none', fontSize: '0.75rem' }}
                   >

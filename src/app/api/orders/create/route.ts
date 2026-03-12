@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { sendSystemMessage } from '@/lib/chat';
 
 // POST /api/orders/create
 // Body: { buyerId, productId, variantId?, quantity }
@@ -103,6 +104,22 @@ export async function POST(req: Request) {
         data: { soldCount: { increment: quantity } },
       }),
     ]);
+
+    // Send system notifications
+    try {
+      const productName = product?.id ? product.id /* actually let's fetch title if we haven't */ : 'Sản phẩm';
+      // Wait, we didn't fetch product title in step 1. Let's just say "1 đơn hàng mới".
+      await sendSystemMessage(
+        product.sellerId,
+        `🎉 Bạn có 1 đơn hàng mới!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nSố lượng: ${quantity}\nThu nhập dự kiến: +${sellerReceives.toLocaleString('vi-VN')}đ (Đang tạm giữ)`
+      );
+      await sendSystemMessage(
+        buyerId,
+        `✅ Bạn đã mua hàng thành công!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nSố lượng: ${quantity}\nSố tiền: -${totalAmount.toLocaleString('vi-VN')}đ\nVui lòng kiểm tra chi tiết trong trang Quản lý đơn hàng.`
+      );
+    } catch (e) {
+      console.error('Failed to notify users via chat', e);
+    }
 
     return NextResponse.json({
       success: true,

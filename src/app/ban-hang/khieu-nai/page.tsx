@@ -75,7 +75,34 @@ export default function SellerDisputesPage() {
     }
   }, [user?.id, tabValue]);
 
-  useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
+  // 1. Initial and tab-based fetch
+  useEffect(() => { 
+    fetchDisputes(); 
+  }, [fetchDisputes]);
+
+  // 2. Deep-linking logic (Runs only when disputes are loaded)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get('q');
+    
+    if (q && disputes.length > 0) {
+      const target = disputes.find(d => 
+        d.order.id.toLowerCase().includes(q.toLowerCase()) || 
+        d.id.toLowerCase() === q.toLowerCase()
+      );
+      
+      // Only open if found, it is OPEN, and NOT already the active resolveDispute
+      if (target && target.status === 'OPEN' && resolveDispute?.id !== target.id) {
+        setResolveDispute(target);
+        setSellerReply('');
+        setError('');
+        
+        // Optional: Clear 'q' to avoid re-triggering if user closes and stays on page
+        // const newUrl = window.location.pathname;
+        // window.history.replaceState({ path: newUrl }, '', newUrl);
+      }
+    }
+  }, [disputes, resolveDispute?.id]);
 
   const handleResolve = async (resolution: 'REFUND' | 'WARRANTY' | 'DISPUTE') => {
     if (!resolveDispute || !user) return;
@@ -89,7 +116,11 @@ export default function SellerDisputesPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Xử lý khiếu nại thành công!');
+        toast.success(
+          resolution === 'REFUND' ? 'Hoàn tiền thành công!' : 
+          resolution === 'WARRANTY' ? 'Đã cấp bảo hành!' : 
+          'Đã chuyển sang tranh chấp!'
+        );
         setResolveDispute(null);
         setSellerReply('');
         fetchDisputes();
