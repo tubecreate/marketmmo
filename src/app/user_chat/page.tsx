@@ -339,7 +339,7 @@ export default function UserChatPage() {
                 
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.25 }}>
-                    <Typography variant="body2" sx={{ color: 'white', fontWeight: isSelected || room.unreadCount > 0 ? 800 : 600, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Typography component="div" variant="body2" sx={{ color: 'white', fontWeight: isSelected || room.unreadCount > 0 ? 800 : 600, display: 'flex', alignItems: 'center', gap: 0.75 }}>
                       {other?.isSystem ? 'System_Bot' : other?.username}
                       {other?.isSystem && <Chip label="BOT" size="small" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 900, bgcolor: '#8b5cf6', color: 'white' }} />}
                     </Typography>
@@ -384,7 +384,7 @@ export default function UserChatPage() {
                   {activeRoom.otherUser?.isSystem ? <SmartToyIcon /> : activeRoom.otherUser?.username.charAt(0).toUpperCase()}
                 </Avatar>
                 <Box>
-                  <Typography variant="subtitle2" fontWeight={800} display="flex" alignItems="center" gap={1}>
+                  <Typography component="div" variant="subtitle2" fontWeight={800} display="flex" alignItems="center" gap={1}>
                     {activeRoom.otherUser?.isSystem ? 'System_Bot' : activeRoom.otherUser?.username}
                     {activeRoom.otherUser?.isSystem && <Chip label="BOT" size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 900, bgcolor: '#8b5cf6', color: 'white' }} />}
                   </Typography>

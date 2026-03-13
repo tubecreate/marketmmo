@@ -12,6 +12,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import GavelIcon from '@mui/icons-material/Gavel';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -24,6 +25,8 @@ const menuItems = [
   { text: 'Cài đặt hệ thống', icon: <SettingsIcon />, href: '/admin/settings' },
   { text: 'Ngoại lệ thành viên', icon: <PeopleIcon />, href: '/admin/overrides' },
   { text: 'Quản lý tranh chấp', icon: <GavelIcon />, href: '/admin/disputes' },
+  { text: 'Duyệt gian hàng', icon: <StorefrontIcon />, href: '/admin/products' },
+  { text: 'Duyệt người bán', icon: <GroupAddIcon />, href: '/admin/seller-requests' },
   { text: 'Cấu hình Chatbot', icon: <SmartToyIcon />, href: '/admin/chatbot' },
 ];
 

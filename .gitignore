@@ -52,3 +52,4 @@ dev.db-journal
 *.db-journal
 
 /src/generated/prisma
+/tmp/

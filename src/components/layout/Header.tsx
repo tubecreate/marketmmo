@@ -236,8 +236,11 @@ export default function Header() {
                     { icon: <AddCardIcon fontSize="small" />, label: 'Nạp tiền', href: '/tai-khoan/nap-tien' },
                     { icon: <KeyIcon fontSize="small" />, label: 'Lấy 2FA', href: '/tai-khoan/lay-2fa' },
                     { icon: <MonetizationOnOutlinedIcon fontSize="small" />, label: 'Kiếm tiền', href: '/tai-khoan/kiem-tien' },
-                    { icon: <StorefrontIcon fontSize="small" />, label: 'Quản lý gian hàng', href: '/ban-hang' },
-                  ].map((item) => (
+                  ].concat(
+                    (user.role === 'SELLER' || user.role === 'ADMIN')
+                      ? [{ icon: <StorefrontIcon fontSize="small" />, label: 'Quản lý gian hàng', href: '/ban-hang' }]
+                      : []
+                  ).map((item) => (
                     <MenuItem
                       key={item.href}
                       component={Link}
@@ -249,15 +252,31 @@ export default function Header() {
                       {item.label}
                     </MenuItem>
                   ))}
-                  <Divider />
-                  <MenuItem
-                    component={Link}
-                    href="/dang-ky-ban-hang"
-                    onClick={() => setAnchorEl(null)}
-                    sx={{ gap: 1.5, py: 1, color: '#16a34a', fontWeight: 600, fontSize: '0.875rem' }}
-                  >
-                    <StorefrontIcon fontSize="small" /> Đăng ký bán hàng
-                  </MenuItem>
+                  {/* Seller registration or dashboard link management */}
+                  {user.role === 'BUYER' && (!user.sellerRequest || user.sellerRequest.status === 'REJECTED') && (
+                    <>
+                      <Divider />
+                      <MenuItem
+                        component={Link}
+                        href="/dang-ky-ban-hang"
+                        onClick={() => setAnchorEl(null)}
+                        sx={{ gap: 1.5, py: 1, color: '#16a34a', fontWeight: 600, fontSize: '0.875rem' }}
+                      >
+                        <StorefrontIcon fontSize="small" /> Đăng ký bán hàng
+                      </MenuItem>
+                    </>
+                  )}
+                  {user.sellerRequest?.status === 'PENDING' && (
+                    <>
+                      <Divider />
+                      <MenuItem
+                        disabled
+                        sx={{ gap: 1.5, py: 1, color: '#f59e0b', fontWeight: 600, fontSize: '0.875rem', opacity: 1 }}
+                      >
+                        <StorefrontIcon fontSize="small" /> Chờ duyệt bán hàng
+                      </MenuItem>
+                    </>
+                  )}
                   <Divider />
                   <MenuItem
                     onClick={() => { setAnchorEl(null); logout(); }}

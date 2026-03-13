@@ -17,7 +17,8 @@ export async function GET(req: Request) {
           select: {
             items: { where: { isSold: false } },   // available stock
           }
-        }
+        },
+        variants: true
       },
       orderBy: { createdAt: 'desc' },
     });

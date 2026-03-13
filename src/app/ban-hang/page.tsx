@@ -176,8 +176,8 @@ export default function SellerProductsPage() {
               SelectProps={{ native: true }}
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="active">Đang bán</option>
-              <option value="hidden">Tạm ẩn</option>
+              <option value="ACTIVE">Đang bán</option>
+              <option value="PENDING">Chờ duyệt</option>
             </TextField>
             <Button variant="contained" disableElevation sx={{ bgcolor: '#16a34a', color: 'white', fontWeight: 800, px: 4, borderRadius: 2, '&:hover': { bgcolor: '#15803d' } }}>
               LỌC DỮ LIỆU
@@ -268,14 +268,14 @@ export default function SellerProductsPage() {
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={p.status === 'ACTIVE' ? 'ĐANG BÁN' : 'TẠM ẨN'} 
+                          label={p.status === 'ACTIVE' ? 'ĐANG BÁN' : 'CHỜ DUYỆT'} 
                           size="small" 
                           sx={{ 
                             fontWeight: 800, fontSize: '0.65rem', borderRadius: 1.5,
-                            bgcolor: p.status === 'ACTIVE' ? '#dcfce7' : '#f1f5f9',
-                            color: p.status === 'ACTIVE' ? '#166534' : '#64748b',
+                            bgcolor: p.status === 'ACTIVE' ? '#dcfce7' : '#fffbeb',
+                            color: p.status === 'ACTIVE' ? '#166534' : '#854d0e',
                             border: '1px solid',
-                            borderColor: p.status === 'ACTIVE' ? '#bbf7d0' : '#e2e8f0'
+                            borderColor: p.status === 'ACTIVE' ? '#bbf7d0' : '#fde68a'
                           }}
                         />
                       </TableCell>

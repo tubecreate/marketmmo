@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         type,
         sellerId,
         warrantyDays: warrantyDays ? parseInt(warrantyDays) : 3,
-        status: 'ACTIVE',
+        status: 'PENDING',
       },
     });
 

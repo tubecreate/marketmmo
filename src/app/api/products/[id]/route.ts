@@ -20,7 +20,8 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
           select: {
             items: { where: { isSold: false } }
           }
-        }
+        },
+        variants: true
       },
     });
 
@@ -37,6 +38,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   try {
     const data = await req.json();
 
+    // Check if requester is ADMIN
+    const isAdmin = data.role === 'ADMIN';
+
     const updated = await prisma.product.update({
       where: { id },
       data: {
@@ -44,7 +48,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         description: data.description,
         price: data.price ? parseFloat(data.price) : undefined,
         priceMax: data.priceMax ? parseFloat(data.priceMax) : undefined,
-        status: data.status,
+        status: isAdmin ? data.status : 'PENDING',
         categoryId: data.categoryId,
         thumbnail: data.thumbnail,
       }

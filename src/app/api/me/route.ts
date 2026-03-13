@@ -17,6 +17,7 @@ export async function GET(req: Request) {
       telegramId: true, twoFactorEnabled: true, phone: true,
       createdAt: true,
       _count: { select: { buyerOrders: true } },
+      sellerRequest: { select: { status: true } }, // Added this
     },
   });
 

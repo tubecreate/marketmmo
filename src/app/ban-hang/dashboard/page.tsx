@@ -248,7 +248,7 @@ export default function SellerDashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
                       { name: 'Đang bán', value: stats?.activeProducts || 0 },
-                      { name: 'Tạm ẩn', value: (stats?.totalProducts || 0) - (stats?.activeProducts || 0) }
+                      { name: 'Chờ duyệt', value: (stats?.totalProducts || 0) - (stats?.activeProducts || 0) }
                     ]}>
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} />
                       <Bar dataKey="value" radius={[6, 6, 0, 0]}>
@@ -319,12 +319,12 @@ export default function SellerDashboardPage() {
                           <Typography variant="caption" sx={{ fontWeight: 800, color: '#16a34a', fontSize: '0.7rem' }}>{p._count.items}</Typography>
                         </Box>
                         <Chip 
-                          label={p.status === 'ACTIVE' ? 'HIỆN' : 'ẨN'} 
+                          label={p.status === 'ACTIVE' ? 'HIỆN' : 'CHỜ DUYỆT'} 
                           size="small"
                           sx={{ 
                             height: 18, fontSize: '0.6rem', fontWeight: 800,
-                            bgcolor: p.status === 'ACTIVE' ? '#dcfce7' : '#f1f5f9',
-                            color: p.status === 'ACTIVE' ? '#166534' : '#64748b'
+                            bgcolor: p.status === 'ACTIVE' ? '#dcfce7' : '#fffbeb',
+                            color: p.status === 'ACTIVE' ? '#166534' : '#854d0e'
                           }} 
                         />
                       </Box>

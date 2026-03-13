@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,283 +7,291 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  username      String    @unique
-  email         String    @unique
-  passwordHash  String
-  balance       Float     @default(0)
-  holdBalance   Float     @default(0) // Số dư đang bị tạm giữ (escrow)
-  role          String    @default("BUYER") // BUYER, SELLER, ADMIN
-  telegramId    String?
-  twoFactorSecret String?
-  twoFactorEnabled Boolean @default(false)
-  level         Int       @default(0)
-  totalRevenue  Float     @default(0)
-  isActive      Boolean   @default(true)
-  avatar        String?
-  fullName      String?
-  phone         String?
-  bankAccount   String?
-  bankName      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String            @id @default(cuid())
+  username         String            @unique
+  email            String            @unique
+  passwordHash     String
+  balance          Float             @default(0)
+  holdBalance      Float             @default(0)
+  role             String            @default("BUYER")
+  telegramId       String?
+  twoFactorSecret  String?
+  twoFactorEnabled Boolean           @default(false)
+  level            Int               @default(0)
+  totalRevenue     Float             @default(0)
+  isActive         Boolean           @default(true)
+  avatar           String?
+  fullName         String?
+  phone            String?
+  bankAccount      String?
+  bankName         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  affiliateLinks   AffiliateLink[]
+  chatLogs         ChatLog[]
+  chatRooms        ChatParticipant[]
+  coupons          Coupon[]
+  sellerOrders     Order[]           @relation("SellerOrders")
+  buyerOrders      Order[]           @relation("BuyerOrders")
+  products         Product[]
+  sellerRequest    SellerRequest?
+  transactions     Transaction[]
+}
 
-  // Relations
-  products      Product[]
-  buyerOrders   Order[]   @relation("BuyerOrders")
-  sellerOrders  Order[]   @relation("SellerOrders")
-  transactions  Transaction[]
-  affiliateLinks AffiliateLink[]
-  chatRooms     ChatParticipant[]
-  chatLogs      ChatLog[]
-  coupons       Coupon[]
+model SellerRequest {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  fullName    String
+  phone       String
+  facebook    String
+  cccd        String
+  bankName    String
+  bankAccount String
+  telegram    String?
+  status      String   @default("PENDING")
+  adminNote   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique
-  icon        String?
-  parentId    String?
-  parent      Category? @relation("SubCategories", fields: [parentId], references: [id])
-  children    Category[] @relation("SubCategories")
-  products    Product[]
-  createdAt   DateTime  @default(now())
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  icon      String?
+  parentId  String?
+  createdAt DateTime   @default(now())
+  parent    Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  children  Category[] @relation("SubCategories")
+  products  Product[]
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  sellerId    String
-  seller      User      @relation(fields: [sellerId], references: [id])
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  title       String
-  slug        String    @unique
-  description String
-  type        String    // DIGITAL, SERVICE
-  price       Float
-  priceMax    Float?    // for range pricing
-  thumbnail   String?
-  status      String    @default("PENDING") // PENDING, ACTIVE, PAUSED, REJECTED
-  isFeatured  Boolean   @default(false)
-  isSponsored Boolean   @default(false)
-  viewCount   Int       @default(0)
-  soldCount   Int       @default(0)
-  rating      Float     @default(0)
-  warrantyDays Int      @default(3) // 3 days for digital, 7 for service
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  items       ProductItem[]
-  variants    ProductVariant[]
-  orders      Order[]
-  reviews     Review[]
+  id           String           @id @default(cuid())
+  sellerId     String
+  categoryId   String?
+  title        String
+  slug         String           @unique
+  description  String
+  type         String
+  price        Float
+  priceMax     Float?
+  thumbnail    String?
+  status       String           @default("PENDING")
+  isFeatured   Boolean          @default(false)
+  isSponsored  Boolean          @default(false)
+  viewCount    Int              @default(0)
+  soldCount    Int              @default(0)
+  rating       Float            @default(0)
+  warrantyDays Int              @default(3)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  orders       Order[]
+  category     Category?        @relation(fields: [categoryId], references: [id])
+  seller       User             @relation(fields: [sellerId], references: [id])
+  items        ProductItem[]
+  variants     ProductVariant[]
+  reviews      Review[]
 }
 
 model ProductVariant {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   productId   String
-  product     Product   @relation(fields: [productId], references: [id])
-  name        String    // e.g. "Gmail 2009-2015 (Cổ)"
+  name        String
   price       Float
   description String?
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
-
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
   items       ProductItem[]
+  product     Product       @relation(fields: [productId], references: [id])
 }
 
 model ProductItem {
-  id          String    @id @default(cuid())
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id])
-  variantId   String?   // optional: links to ProductVariant
-  variant     ProductVariant? @relation(fields: [variantId], references: [id])
-  content     String    // the actual digital content (key, account, etc.)
-  isSold      Boolean   @default(false)
-  soldAt      DateTime?
-  createdAt   DateTime  @default(now())
+  id        String          @id @default(cuid())
+  productId String
+  variantId String?
+  content   String
+  isSold    Boolean         @default(false)
+  soldAt    DateTime?
+  createdAt DateTime        @default(now())
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  product   Product         @relation(fields: [productId], references: [id])
 }
 
 model Order {
-  id              String    @id @default(cuid())
-  buyerId         String
-  buyer           User      @relation("BuyerOrders", fields: [buyerId], references: [id])
-  sellerId        String
-  seller          User      @relation("SellerOrders", fields: [sellerId], references: [id])
-  productId       String
-  product         Product   @relation(fields: [productId], references: [id])
-  variantName     String?   // Tên biến thể đã mua (vd: Kênh Bật Kiếm Tiền)
-  quantity        Int       @default(1)
-  amount          Float
-  fee             Float     @default(0)
-  status          String    @default("PENDING") // PENDING, HOLDING, COMPLETED, DISPUTED, REFUNDED
+  id               String    @id @default(cuid())
+  buyerId          String
+  sellerId         String
+  productId        String
+  variantName      String?
+  quantity         Int       @default(1)
+  amount           Float
+  fee              Float     @default(0)
+  status           String    @default("PENDING")
   deliveredContent String?
-  warrantyExpire  DateTime?
-  couponCode      String?
-  discountAmount  Float     @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  dispute         Dispute?
-  review          Review?
+  warrantyExpire   DateTime?
+  couponCode       String?
+  discountAmount   Float     @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  dispute          Dispute?
+  product          Product   @relation(fields: [productId], references: [id])
+  seller           User      @relation("SellerOrders", fields: [sellerId], references: [id])
+  buyer            User      @relation("BuyerOrders", fields: [buyerId], references: [id])
+  review           Review?
 }
 
 model Dispute {
-  id            String    @id @default(cuid())
-  orderId       String    @unique
-  order         Order     @relation(fields: [orderId], references: [id])
+  id            String           @id @default(cuid())
+  orderId       String           @unique
   reason        String
-  evidence      String?             // Items lỗi buyer paste vào
-  faultyCount   Int       @default(0) // Số items lỗi
-  status        String    @default("OPEN") // OPEN, REFUNDED, WARRANTY, ESCALATED, RESOLVED, CLOSED
-  resolution    String?             // REFUND, WARRANTY, DISPUTE
+  evidence      String?
+  faultyCount   Int              @default(0)
+  status        String           @default("OPEN")
+  resolution    String?
   sellerReply   String?
   adminDecision String?
-  refundAmount  Float     @default(0)
+  refundAmount  Float            @default(0)
   resolvedAt    DateTime?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime         @default(now())
+  order         Order            @relation(fields: [orderId], references: [id])
   messages      DisputeMessage[]
 }
 
 model DisputeMessage {
-  id          String    @id @default(cuid())
-  disputeId   String
-  dispute     Dispute   @relation(fields: [disputeId], references: [id])
-  senderId    String
-  senderRole  String    // BUYER, SELLER, ADMIN
-  message     String
-  createdAt   DateTime  @default(now())
+  id         String   @id @default(cuid())
+  disputeId  String
+  senderId   String
+  senderRole String
+  message    String
+  createdAt  DateTime @default(now())
+  dispute    Dispute  @relation(fields: [disputeId], references: [id])
 }
 
 model Transaction {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
   amount      Float
-  type        String    // DEPOSIT, WITHDRAW, PURCHASE, REFUND, FEE
-  status      String    @default("PENDING") // PENDING, SUCCESS, FAILED
+  type        String
+  status      String   @default("PENDING")
   gatewayRef  String?
   description String?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Review {
-  id        String    @id @default(cuid())
-  orderId   String    @unique
-  order     Order     @relation(fields: [orderId], references: [id])
+  id        String   @id @default(cuid())
+  orderId   String   @unique
   productId String
-  product   Product   @relation(fields: [productId], references: [id])
-  rating    Int       // 1-5
+  rating    Int
   comment   String?
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id])
 }
 
 model Coupon {
   id            String    @id @default(cuid())
   sellerId      String
-  seller        User      @relation(fields: [sellerId], references: [id])
   code          String    @unique
-  discountType  String    // PERCENT, FIXED
+  discountType  String
   discountValue Float
   usageLimit    Int?
   usageCount    Int       @default(0)
   expiresAt     DateTime?
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
+  seller        User      @relation(fields: [sellerId], references: [id])
 }
 
 model AffiliateLink {
-  id              String    @id @default(cuid())
-  userId          String
-  user            User      @relation(fields: [userId], references: [id])
-  code            String    @unique
-  commissionRate  Float     @default(5)
-  totalEarned     Float     @default(0)
-  clickCount      Int       @default(0)
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(cuid())
+  userId         String
+  code           String   @unique
+  commissionRate Float    @default(5)
+  totalEarned    Float    @default(0)
+  clickCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
 }
 
 model ChatLog {
-  id            String    @id @default(cuid())
-  sessionId     String
-  userId        String?
-  user          User?     @relation(fields: [userId], references: [id])
-  message       String
-  aiResponse    String
+  id             String   @id @default(cuid())
+  sessionId      String
+  userId         String?
+  message        String
+  aiResponse     String
   contextSummary String?
-  createdAt     DateTime  @default(now())
+  createdAt      DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id])
 }
 
 model Banner {
-  id          String    @id @default(cuid())
-  imageUrl    String
-  linkUrl     String?
-  title       String?
-  isActive    Boolean   @default(true)
-  order       Int       @default(0)
-  createdAt   DateTime  @default(now())
+  id        String   @id @default(cuid())
+  imageUrl  String
+  linkUrl   String?
+  title     String?
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 model Announcement {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   message   String
-  isActive  Boolean   @default(true)
-  order     Int       @default(0)
-  createdAt DateTime  @default(now())
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
-// Admin system settings (single row, key-value)
 model SystemConfig {
-  id                  String  @id @default("default")
-  maxBoothsPerSeller  Int     @default(10)   // Giới hạn gian hàng mỗi seller
-  maxItemsPerOrder    Int     @default(50)   // Giới hạn items mỗi đơn
-  commissionRate      Float   @default(5)    // % hoa hồng sàn
-  minWithdrawAmount   Float   @default(50000)
-  maintenanceMode     Boolean @default(false)
-  updatedAt           DateTime @updatedAt
+  id                 String   @id @default("default")
+  maxBoothsPerSeller Int      @default(10)
+  maxItemsPerOrder   Int      @default(50)
+  commissionRate     Float    @default(5)
+  minWithdrawAmount  Float    @default(50000)
+  maintenanceMode    Boolean  @default(false)
+  updatedAt          DateTime @updatedAt
 }
 
-// Per-user overrides for limits
 model UserOverride {
-  id                  String  @id @default(cuid())
-  userId              String  @unique
-  maxBooths           Int?    // null = dùng mặc định
-  maxItemsPerOrder    Int?
-  commissionRate      Float?  // custom commission
-  note                String? // admin ghi chú
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  maxBooths        Int?
+  maxItemsPerOrder Int?
+  commissionRate   Float?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model ChatRoom {
-  id            String        @id @default(cuid())
-  isGroup       Boolean       @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
-  participants  ChatParticipant[]
-  messages      ChatMessage[]
+  id           String            @id @default(cuid())
+  isGroup      Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  messages     ChatMessage[]
+  participants ChatParticipant[]
 }
 
 model ChatParticipant {
-  id         String   @id @default(cuid())
-  roomId     String
-  userId     String   // Liên kết với User.id (hoặc 'SYSTEM_BOT')
-  lastRead   DateTime @default(now())
-  joinedAt   DateTime @default(now())
-  
-  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+  lastRead DateTime @default(now())
+  joinedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room     ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
 }
 
 model ChatMessage {
-  id         String   @id @default(cuid())
-  roomId     String
-  senderId   String   // Liên kết với User.id (hoặc 'SYSTEM_BOT')
-  content    String
-  createdAt  DateTime @default(now())
-  isSystem   Boolean  @default(false) // Đánh dấu tin nhắn hệ thống
-  
-  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  roomId    String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+  isSystem  Boolean  @default(false)
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
 }

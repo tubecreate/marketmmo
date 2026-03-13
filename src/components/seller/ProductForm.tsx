@@ -81,6 +81,16 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           warranty: String((product.warrantyDays as number) || 3),
           thumbnail: (product.thumbnail as string) || '',
         });
+        if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+          setVariants((product.variants as any[]).map((v) => ({
+            id: v.id,
+            name: v.name,
+            price: String(v.price),
+            description: v.description || '',
+          })));
+        } else {
+          setVariants([{ id: '1', name: '', price: '', description: '' }]);
+        }
       } else {
         setFormData({ title: '', description: '', categoryId: '', type: 'DIGITAL', warranty: '3', thumbnail: '' });
         setVariants([{ id: '1', name: '', price: '', description: '' }]);

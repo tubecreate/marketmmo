@@ -12,8 +12,12 @@ interface AuthUser {
   level: number;
   telegramId: string | null;
   twoFactorEnabled: boolean;
+  phone: string | null;
+  bankName: string | null;
+  bankAccount: string | null;
   createdAt: string;
   _count?: { buyerOrders: number };
+  sellerRequest?: { status: string } | null;
 }
 
 interface AuthCtx {
