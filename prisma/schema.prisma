@@ -253,6 +253,9 @@ model SystemConfig {
   commissionRate     Float    @default(5)
   minWithdrawAmount  Float    @default(50000)
   maintenanceMode    Boolean  @default(false)
+  sepayApiKey        String?
+  sepayMerchantId    String?
+  sepayWebhookSecret String?
   updatedAt          DateTime @updatedAt
 }
 

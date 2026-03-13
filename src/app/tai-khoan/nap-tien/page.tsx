@@ -1,278 +1,249 @@
 'use client';
-import React, { useState } from 'react';
-import SiteLayout from '@/components/layout/SiteLayout';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
-  Box, Container, Grid, Paper, Typography, Button, TextField,
-  InputAdornment, Alert, Chip, Divider, alpha, Tab, Tabs,
+  Box, Typography, Paper, TextField, Button, Grid,
+  Alert, CircularProgress, Divider, List, ListItem, ListItemText,
+  Breadcrumbs, Link as MuiLink
 } from '@mui/material';
-import AddCardIcon from '@mui/icons-material/AddCard';
-import QrCode2Icon from '@mui/icons-material/QrCode2';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import SiteLayout from '@/components/layout/SiteLayout';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import HistoryIcon from '@mui/icons-material/History';
+import InfoIcon from '@mui/icons-material/Info';
 
-const quickAmounts = [10000, 20000, 50000, 100000, 200000, 500000];
+const PRESET_AMOUNTS = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
-export default function NapTienPage() {
-  const router = useRouter();
+export default function DepositPage() {
   const { user } = useAuth();
-  const [amount, setAmount] = useState('');
-  const [copied, setCopied] = useState<string | null>(null);
+  const [amount, setAmount] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [paymentData, setPaymentData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
-  React.useEffect(() => {
-    const stored = localStorage.getItem('mmo_user');
-    if (!stored) router.push('/dang-nhap');
-  }, [router]);
+  const fetchHistory = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/me/transactions?userId=${user.id}`, { credentials: 'same-origin' });
+      const data = await res.json();
+      setTransactions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to fetch transactions', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [user]);
 
-  const selectedAmount = Number(amount.replace(/\D/g, ''));
-  const bankInfo = {
-    bank: 'MB Bank (MBBank)',
-    accountNumber: '1234567890',
-    accountName: 'MARKETMMO PLATFORM',
-    content: `NAP ${selectedAmount || '10000'} ${user?.username?.toUpperCase() || ''}`,
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleCreatePayment = async () => {
+    if (!amount || parseInt(amount) < 10000) {
+      setError('Số tiền nạp tối thiểu là 10.000đ');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, amount: parseInt(amount) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPaymentData(data);
+        fetchHistory(); // Refresh history to show pending
+      } else {
+        setError(data.error || 'Có lỗi xảy ra');
+      }
+    } catch (err) {
+      setError('Không thể kết nối đến máy chủ');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCopy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(key);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  const formatVND = (val: string) => {
-    const num = val.replace(/\D/g, '');
-    return num ? Number(num).toLocaleString('vi-VN') : '';
-  };
+  const qrUrl = paymentData ? 
+    `https://img.vietqr.io/image/${paymentData.bankInfo.bankName.replace(/ /g, '')}-${paymentData.bankInfo.accountNumber}-compact.png?amount=${paymentData.amount}&addInfo=${paymentData.paymentCode}&accountName=${encodeURIComponent(paymentData.bankInfo.accountHolder)}` 
+    : '';
 
   return (
     <SiteLayout>
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        {/* Header */}
-        <Box
-          sx={{
-            p: 3,
-            mb: 3,
-            borderRadius: 3,
-            background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
-        >
-          <AddCardIcon sx={{ fontSize: 36, opacity: 0.9 }} />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>Nạp Tiền Tự Động</Typography>
-            <Typography variant="body2" sx={{ opacity: 0.85 }}>Chuyển khoản ngân hàng – Cộng tiền trong vòng 30 giây</Typography>
-          </Box>
-          <Box sx={{ ml: 'auto', textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>Số dư hiện tại</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>{(user?.balance || 0).toLocaleString('vi-VN')} VNĐ</Typography>
-          </Box>
-        </Box>
+      <Box sx={{ maxWidth: 1000, mx: 'auto', p: { xs: 2, md: 4 } }}>
+        <Breadcrumbs sx={{ mb: 3 }}>
+          <MuiLink component={Link} href="/" color="inherit" underline="hover">Trang chủ</MuiLink>
+          <MuiLink component={Link} href="/tai-khoan" color="inherit" underline="hover">Tài khoản</MuiLink>
+          <Typography color="text.primary">Nạp tiền</Typography>
+        </Breadcrumbs>
 
-        <Grid container spacing={3}>
-          {/* Left: Amount input */}
-          <Grid size={{ xs: 12, md: 5 }}>
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-                1. Chọn số tiền nạp
+        <Grid container spacing={4}>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Paper sx={{ p: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+              <Typography variant="h5" fontWeight={800} gutterBottom display="flex" alignItems="center" gap={1.5}>
+                <AccountBalanceWalletIcon color="primary" /> Nạp tiền vào tài khoản
+              </Typography>
+              <Typography variant="body2" color="text.secondary" mb={4}>
+                Hệ thống nạp tiền tự động qua ngân hàng 24/7. Tiền sẽ được cộng vào tài khoản sau 1-3 phút.
               </Typography>
 
-              <TextField
-                fullWidth
-                label="Số tiền (VNĐ)"
-                value={formatVND(amount)}
-                onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
-                placeholder="100,000"
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">₫</InputAdornment>,
-                }}
-                sx={{ mb: 2 }}
-              />
+              {!paymentData ? (
+                <>
+                  <Typography variant="subtitle2" fontWeight={700} mb={2}>Chọn hoặc nhập số tiền muốn nạp (VND)</Typography>
+                  <Grid container spacing={1} mb={3}>
+                    {PRESET_AMOUNTS.map((v) => (
+                      <Grid size={{ xs: 4 }} key={v}>
+                        <Button
+                          fullWidth
+                          variant={amount === v.toString() ? "contained" : "outlined"}
+                          onClick={() => setAmount(v.toString())}
+                          sx={{ borderRadius: 2, py: 1 }}
+                        >
+                          {v.toLocaleString('vi-VN')}
+                        </Button>
+                      </Grid>
+                    ))}
+                  </Grid>
 
-              {/* Quick amounts */}
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                Chọn nhanh:
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2.5 }}>
-                {quickAmounts.map((a) => (
-                  <Chip
-                    key={a}
-                    label={`${(a / 1000).toFixed(0)}k`}
-                    onClick={() => setAmount(String(a))}
-                    sx={{
-                      cursor: 'pointer',
-                      bgcolor: selectedAmount === a ? '#16a34a' : alpha('#16a34a', 0.08),
-                      color: selectedAmount === a ? 'white' : '#16a34a',
-                      fontWeight: 600,
-                      border: `1px solid ${selectedAmount === a ? '#16a34a' : alpha('#16a34a', 0.2)}`,
-                      '&:hover': { bgcolor: selectedAmount === a ? '#15803d' : alpha('#16a34a', 0.15) },
+                  <TextField
+                    fullWidth
+                    label="Số tiền muốn nạp"
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="VD: 100000"
+                    sx={{ mb: 3 }}
+                    InputProps={{
+                      endAdornment: <Typography variant="body2" color="text.secondary">VND</Typography>,
                     }}
                   />
-                ))}
-              </Box>
 
-              <Alert severity="info" variant="outlined" sx={{ borderRadius: 2, fontSize: '0.78rem', borderColor: alpha('#16a34a', 0.3) }}
-                icon={<InfoOutlinedIcon sx={{ fontSize: 18, color: '#16a34a' }} />}
-              >
-                <strong>Tích lũy không giới hạn!</strong> Nạp bao nhiêu cũng được, số dư không hết hạn.
-              </Alert>
+                  {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-              <Divider sx={{ my: 2 }} />
-
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>Lịch sử nạp tiền gần đây</Typography>
-              <Box sx={{ textAlign: 'center', py: 2 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                  Chưa có lịch sử nạp tiền
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Right: QR + Bank transfer */}
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-                2. Chuyển khoản ngân hàng
-              </Typography>
-
-              {/* QR Code placeholder */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                <Box
-                  sx={{
-                    width: 200,
-                    height: 200,
-                    border: '3px solid #16a34a',
-                    borderRadius: 3,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: '#f0fdf4',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <QrCode2Icon sx={{ fontSize: 100, color: '#16a34a', opacity: 0.8 }} />
-                  <Typography variant="caption" sx={{ color: '#16a34a', fontWeight: 700, mt: 1 }}>
-                    {selectedAmount ? `${selectedAmount.toLocaleString('vi-VN')}đ` : 'Nhập số tiền'}
-                  </Typography>
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 8,
-                      left: 8,
-                      right: 8,
-                      bgcolor: '#16a34a',
-                      borderRadius: 1,
-                      py: 0.25,
-                      textAlign: 'center',
-                    }}
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    onClick={handleCreatePayment}
+                    disabled={loading || !user}
+                    sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, fontSize: '1.1rem' }}
                   >
-                    <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: '0.65rem' }}>
-                      SEPAY · QR CHUYỂN KHOẢN
+                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Tiếp tục thanh toán'}
+                  </Button>
+                </>
+              ) : (
+                <Box>
+                  <Alert severity="success" sx={{ mb: 4, borderRadius: 2 }}>
+                    Vui lòng chuyển đúng số tiền và nội dung bên dưới để được cộng tiền tự động.
+                  </Alert>
+
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="caption" color="text.secondary" display="block">NGÂN HÀNG</Typography>
+                      <Typography variant="body1" fontWeight={700} gutterBottom>{paymentData.bankInfo.bankName}</Typography>
+                      
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>SỐ TÀI KHOẢN</Typography>
+                      <Typography variant="h6" fontWeight={800} color="primary" gutterBottom>{paymentData.bankInfo.accountNumber}</Typography>
+                      
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>CHỦ TÀI KHOẢN</Typography>
+                      <Typography variant="body1" fontWeight={700} gutterBottom>{paymentData.bankInfo.accountHolder}</Typography>
+
+                      <Divider sx={{ my: 2 }} />
+                      
+                      <Typography variant="caption" color="text.secondary" display="block">SỐ TIỀN</Typography>
+                      <Typography variant="h5" fontWeight={800} color="error">{paymentData.amount.toLocaleString('vi-VN')}đ</Typography>
+
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>NỘI DUNG CHUYỂN KHOẢN</Typography>
+                      <Box sx={{ p: 2, bgcolor: '#f0f9ff', borderRadius: 2, border: '1px dashed #0ea5e9', mt: 1, textAlign: 'center' }}>
+                        <Typography variant="h5" fontWeight={900} color="#0369a1" letterSpacing={1}>
+                          {paymentData.paymentCode}
+                        </Typography>
+                        <Typography variant="caption" color="#0369a1" fontWeight={600}>Copy đúng chính xác nội dung này</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box sx={{ p: 2, bgcolor: 'white', border: '1px solid #e2e8f0', borderRadius: 3, mb: 1, textAlign: 'center' }}>
+                        <img src={qrUrl} alt="VietQR" style={{ width: '100%', maxWidth: 200 }} />
+                        <Typography variant="caption" display="block" color="text.secondary" mt={1}>Quét mã để thanh toán nhanh</Typography>
+                      </Box>
+                      <Button variant="text" size="small" startIcon={<QrCode2Icon />} onClick={() => setPaymentData(null)}>
+                        Đổi số tiền nạp
+                      </Button>
+                    </Grid>
+                  </Grid>
+
+                  <Box sx={{ mt: 4, p: 2, bgcolor: '#fff7ed', borderRadius: 2, display: 'flex', gap: 2 }}>
+                    <InfoIcon sx={{ color: '#ea580c' }} />
+                    <Typography variant="body2" color="#9a3412">
+                      <strong>Lưu ý:</strong> Tiền sẽ được cộng tự động sau 1-5 phút khi hệ thống nhận được tiền. 
+                      Nếu sau 15 phút chưa thấy cộng tiền, vui lòng liên hệ Admin kèm theo ảnh chụp biên lai.
                     </Typography>
                   </Box>
                 </Box>
-              </Box>
+              )}
+            </Paper>
+          </Grid>
 
-              {/* Bank info */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {[
-                  { label: 'Ngân hàng', value: bankInfo.bank, key: 'bank' },
-                  { label: 'Số tài khoản', value: bankInfo.accountNumber, key: 'acc', highlight: true },
-                  { label: 'Chủ tài khoản', value: bankInfo.accountName, key: 'name' },
-                  { label: 'Nội dung chuyển khoản', value: bankInfo.content, key: 'content', highlight: true, important: true },
-                ].map((row) => (
-                  <Box
-                    key={row.key}
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: row.important ? '#f0fdf4' : '#f8fafc',
-                      border: '1px solid',
-                      borderColor: row.important ? '#bbf7d0' : 'divider',
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
-                        {row.label}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: row.highlight ? 700 : 500,
-                          color: row.important ? '#16a34a' : 'text.primary',
-                          fontSize: '0.9rem',
-                        }}
-                      >
-                        {row.value}
-                      </Typography>
-                    </Box>
-                    <Button
-                      size="small"
-                      startIcon={copied === row.key ? <CheckCircleIcon sx={{ fontSize: '14px !important' }} /> : <ContentCopyIcon sx={{ fontSize: '14px !important' }} />}
-                      onClick={() => handleCopy(row.value, row.key)}
-                      sx={{
-                        color: copied === row.key ? '#16a34a' : 'text.secondary',
-                        fontSize: '0.72rem',
-                        minWidth: 'auto',
-                      }}
-                    >
-                      {copied === row.key ? 'Đã chép' : 'Sao chép'}
-                    </Button>
-                  </Box>
-                ))}
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Paper sx={{ p: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" fontWeight={800} gutterBottom display="flex" alignItems="center" gap={1.5}>
+                <HistoryIcon color="primary" /> Lịch sử nạp tiền
+              </Typography>
+              
+              <Box sx={{ flex: 1, mt: 2 }}>
+                {loadingHistory ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress size={24} /></Box>
+                ) : transactions.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>Chưa có giao dịch nào.</Typography>
+                ) : (
+                  <List disablePadding>
+                    {transactions.map((t, idx) => (
+                      <React.Fragment key={t.id}>
+                        <ListItem sx={{ px: 0, py: 1.5 }}>
+                          <ListItemText
+                            primary={
+                              <Box display="flex" justifyContent="space-between">
+                                <Typography variant="body2" fontWeight={700}>
+                                  {t.type === 'DEPOSIT' ? 'Nạp tiền' : 'Chi tiêu'}
+                                </Typography>
+                                <Typography variant="body2" fontWeight={800} color={t.status === 'SUCCESS' ? 'success.main' : t.status === 'PENDING' ? 'warning.main' : 'error.main'}>
+                                  {t.type === 'DEPOSIT' ? '+' : '-'}{t.amount.toLocaleString('vi-VN')}đ
+                                </Typography>
+                              </Box>
+                            }
+                            secondary={
+                              <Box display="flex" justifyContent="space-between" mt={0.5}>
+                                <Typography variant="caption" color="text.secondary">
+                                  {format(new Date(t.createdAt), 'HH:mm dd/MM/yyyy')}
+                                </Typography>
+                                <Typography variant="caption" sx={{ 
+                                  px: 1, borderRadius: 1, 
+                                  bgcolor: t.status === 'SUCCESS' ? '#f0fdf4' : t.status === 'PENDING' ? '#fffbeb' : '#fef2f2',
+                                  color: t.status === 'SUCCESS' ? '#166534' : t.status === 'PENDING' ? '#92400e' : '#991b1b'
+                                }}>
+                                  {t.status === 'SUCCESS' ? 'Thành công' : t.status === 'PENDING' ? 'Đang xử lý' : 'Thất bại'}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </ListItem>
+                        {idx < transactions.length - 1 && <Divider component="li" />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                )}
               </Box>
-
-              <Alert
-                severity="warning"
-                sx={{ mt: 2.5, borderRadius: 2, fontSize: '0.78rem' }}
-              >
-                ⚠️ <strong>Quan trọng:</strong> Nhập <strong>đúng nội dung chuyển khoản</strong> để hệ thống tự động cộng số dư. Sai nội dung sẽ không được xử lý tự động.
-              </Alert>
-
-              {/* Steps */}
-              <Box sx={{ mt: 2.5 }}>
-                {[
-                  'Quét mã QR hoặc chuyển khoản với thông tin trên',
-                  'Nhập đúng nội dung chuyển khoản',
-                  'Số dư tự động cộng trong vòng 30 giây',
-                ].map((step, i) => (
-                  <Box key={i} sx={{ display: 'flex', gap: 1.5, mb: 1 }}>
-                    <Box
-                      sx={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        bgcolor: '#16a34a',
-                        color: 'white',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {i + 1}
-                    </Box>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.82rem', lineHeight: 1.6 }}>
-                      {step}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
+              
+              <Button fullWidth href="/tai-khoan/giao-dich" sx={{ mt: 2, color: 'text.secondary' }}>Xem tất cả giao dịch</Button>
             </Paper>
           </Grid>
         </Grid>
-      </Container>
+      </Box>
     </SiteLayout>
   );
 }

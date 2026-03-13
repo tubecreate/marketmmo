@@ -165,26 +165,30 @@ export default function Header() {
                   </IconButton>
                 </Tooltip>
 
-                {/* Balance pill */}
-                <Box
-                  sx={{
-                    display: { xs: 'none', lg: 'flex' },
-                    alignItems: 'center',
-                    gap: 0.75,
-                    px: 2,
-                    py: 0.75,
-                    bgcolor: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    borderRadius: 3,
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: '#dcfce7' },
-                  }}
-                >
-                  <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 18, color: '#16a34a' }} />
-                  <Typography sx={{ fontWeight: 700, color: '#16a34a', fontSize: '0.85rem' }}>
-                    {user.balance.toLocaleString('vi-VN')}đ
-                  </Typography>
-                </Box>
+                <Tooltip title="Nạp tiền vào tài khoản">
+                  <Box
+                    component={Link}
+                    href="/tai-khoan/nap-tien"
+                    sx={{
+                      display: { xs: 'none', lg: 'flex' },
+                      alignItems: 'center',
+                      gap: 0.75,
+                      px: 2,
+                      py: 0.75,
+                      bgcolor: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                      '&:hover': { bgcolor: '#dcfce7' },
+                    }}
+                  >
+                    <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 18, color: '#16a34a' }} />
+                    <Typography sx={{ fontWeight: 700, color: '#16a34a', fontSize: '0.85rem' }}>
+                      {user.balance.toLocaleString('vi-VN')}đ
+                    </Typography>
+                  </Box>
+                </Tooltip>
 
                 {/* Avatar */}
                 <Box
