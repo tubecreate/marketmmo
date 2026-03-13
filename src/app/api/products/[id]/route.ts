@@ -18,7 +18,8 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
         seller: { select: { id: true, username: true, fullName: true, avatar: true, isActive: true, createdAt: true, _count: { select: { sellerOrders: true } } } },
         _count: {
           select: {
-            items: { where: { isSold: false } }
+            items: { where: { isSold: false } },
+            orders: { where: { review: { isNot: null } } }
           }
         },
         variants: true
@@ -66,7 +67,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         status: nextStatus,
         categoryId: data.categoryId,
         thumbnail: data.thumbnail,
-      }
+      } as any
     });
 
     if (data.status === 'ACTIVE' && isAdmin) {

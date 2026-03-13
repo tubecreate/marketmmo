@@ -37,11 +37,7 @@ export async function POST(req: Request) {
       take: quantity,
     });
 
-    if (availableItems.length < quantity) {
-      return NextResponse.json({
-        error: `Không đủ hàng. Chỉ còn ${availableItems.length} sản phẩm.`
-      }, { status: 400 });
-    }
+    const isPreOrder = availableItems.length < quantity;
 
     // 3. Calculate price
     const unitPrice = variant ? variant.price : (
@@ -59,6 +55,63 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    if (isPreOrder) {
+      // ── PRE-ORDER FLOW ──
+      const [order] = await prisma.$transaction([
+        prisma.order.create({
+          data: {
+            buyerId,
+            sellerId: product.sellerId,
+            productId,
+            amount: totalAmount,
+            quantity,
+            fee: platformFee,
+            status: 'PRE_ORDER',
+            deliveredContent: null,
+            variantName: variant?.name || 'Kho chung',
+            variantId: variantId || null,
+          } as any,
+        }),
+        // Deduct from buyer's balance
+        prisma.user.update({
+          where: { id: buyerId },
+          data: { balance: { decrement: totalAmount } },
+        }),
+        // Add to seller's holdBalance (escrow)
+        prisma.user.update({
+          where: { id: product.sellerId },
+          data: { holdBalance: { increment: sellerReceives } },
+        }),
+      ]);
+
+      // Send notifications
+      try {
+        await sendSystemMessage(
+          product.sellerId,
+          `📦 Đơn đặt trước mới!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nSố lượng: ${quantity}\nThu nhập dự kiến: +${sellerReceives.toLocaleString('vi-VN')}đ (Đang tạm giữ)\nVui lòng nhập thêm hàng để tự động giao cho người mua.`
+        );
+        await sendSystemMessage(
+          buyerId,
+          `⏳ Bạn đã đặt trước thành công!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nSố lượng: ${quantity}\nSố tiền: -${totalAmount.toLocaleString('vi-VN')}đ\nHàng sẽ được giao tự động khi người bán nhập kho. Bạn có thể huỷ bất kỳ lúc nào.`
+        );
+      } catch (e) {
+        console.error('Failed to notify users via chat', e);
+      }
+
+      return NextResponse.json({
+        success: true,
+        preOrder: true,
+        order: {
+          id: order.id,
+          amount: totalAmount,
+          quantity,
+          variantName: variant?.name || 'Kho chung',
+          deliveredContent: null,
+        },
+      });
+    }
+
+    // ── NORMAL ORDER FLOW ──
     // 5. Execute transaction atomically
     const itemIds = availableItems.map((i: { id: string }) => i.id);
     const deliveredContent = availableItems.map((i: { content: string }) => i.content).join('\n');
@@ -79,7 +132,8 @@ export async function POST(req: Request) {
           deliveredContent,
           warrantyExpire,
           variantName: variant?.name || 'Kho chung',
-        },
+          variantId: variantId || null,
+        } as any,
       }),
       // Mark items as sold
       prisma.productItem.updateMany({
@@ -107,8 +161,6 @@ export async function POST(req: Request) {
 
     // Send system notifications
     try {
-      const productName = product?.id ? product.id /* actually let's fetch title if we haven't */ : 'Sản phẩm';
-      // Wait, we didn't fetch product title in step 1. Let's just say "1 đơn hàng mới".
       await sendSystemMessage(
         product.sellerId,
         `🎉 Bạn có 1 đơn hàng mới!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nSố lượng: ${quantity}\nThu nhập dự kiến: +${sellerReceives.toLocaleString('vi-VN')}đ (Đang tạm giữ)`

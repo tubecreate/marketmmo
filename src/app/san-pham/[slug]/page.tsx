@@ -7,6 +7,7 @@ import {
   Box, Container, Grid, Paper, Typography, Button, Chip,
   Divider, Skeleton, Breadcrumbs, Link as MuiLink,
   IconButton, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField,
+  Rating, Avatar, Stack
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
@@ -38,6 +39,8 @@ export default function ProductDetailPage() {
   const [selectedVar, setSelectedVar] = useState<Variant | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   useEffect(() => {
     if (!params.slug) return;
@@ -60,6 +63,15 @@ export default function ProductDetailPage() {
       } catch { /* no variants */ }
 
       setLoading(false);
+
+      // Fetch reviews
+      try {
+        const rRes = await fetch(`/api/reviews?productId=${data.id}`);
+        const rData = await rRes.json();
+        setReviews(Array.isArray(rData) ? rData : []);
+      } catch { /* no reviews */ }
+      setReviewsLoading(false);
+
     }).catch(() => router.push('/404'));
   }, [params.slug, router]);
 
@@ -81,7 +93,7 @@ export default function ProductDetailPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setOrderResult(data.order);
+        setOrderResult({ ...data.order, preOrder: data.preOrder || false });
         // Refresh variant stock counts
         const vRes = await fetch(`/api/products/${product.id}/variants`);
         const vData = await vRes.json();
@@ -101,7 +113,14 @@ export default function ProductDetailPage() {
 
   const handleQtyChange = (type: 'sub' | 'add') => {
     if (type === 'sub' && quantity > 1) setQuantity(q => q - 1);
-    if (type === 'add' && quantity < selectedStock) setQuantity(q => q + 1);
+    // Allow increasing quantity for pre-orders (selectedStock === 0) up to 100
+    if (type === 'add') {
+      if (selectedStock > 0 && quantity < selectedStock) {
+        setQuantity(q => q + 1);
+      } else if (selectedStock === 0 && quantity < 100) {
+        setQuantity(q => q + 1);
+      }
+    }
   };
 
   if (loading) {
@@ -208,8 +227,11 @@ export default function ProductDetailPage() {
 
               {/* Stats row */}
               <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 1.5, fontSize: '0.85rem', color: '#64748b' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', color: '#f59e0b' }}>
-                  {'★'.repeat(5)} <Typography component="span" sx={{ ml: 0.5, color: '#64748b', fontSize: '0.85rem' }}>(5 đánh giá)</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', color: '#f59e0b', gap: 0.5 }}>
+                  <Rating value={Number(product.rating) || 0} precision={0.5} readOnly size="small" sx={{ color: '#f59e0b' }} />
+                  <Typography component="span" sx={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
+                    ({(product._count as any)?.orders || 0} đánh giá)
+                  </Typography>
                 </Box>
                 <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto' }} />
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -269,21 +291,21 @@ export default function ProductDetailPage() {
                       return (
                         <Box
                           key={v.id}
-                          onClick={() => { if (!outOfStock) { setSelectedVar(v); setQuantity(1); } }}
+                          onClick={() => { setSelectedVar(v); setQuantity(1); }}
                           sx={{
                             p: 1.5, border: '1px solid',
-                            borderColor: isSelected ? '#fde047' : outOfStock ? '#f1f5f9' : '#e2e8f0',
-                            bgcolor: isSelected ? '#fef9c3' : outOfStock ? '#f8fafc' : 'white',
+                            borderColor: isSelected ? '#16a34a' : outOfStock ? '#e2e8f0' : '#e2e8f0',
+                            bgcolor: isSelected ? '#f0fdf4' : 'white',
                             borderRadius: 1,
-                            cursor: outOfStock ? 'not-allowed' : 'pointer',
-                            opacity: outOfStock ? 0.55 : 1,
+                            cursor: 'pointer',
                             transition: 'all 0.15s',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            '&:hover': !outOfStock ? { borderColor: '#fcd34d', bgcolor: '#fef3c7' } : {},
+                            '&:hover': { borderColor: '#16a34a', bgcolor: '#f0fdf4' },
+                            position: 'relative'
                           }}
                         >
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 700, color: isSelected ? '#854d0e' : '#475569', textTransform: 'uppercase' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: isSelected ? '#166534' : '#475569', textTransform: 'uppercase' }}>
                               {v.name}
                             </Typography>
                             {v.description && (
@@ -294,8 +316,8 @@ export default function ProductDetailPage() {
                             <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>
                               {v.price.toLocaleString('vi-VN')}đ
                             </Typography>
-                            <Typography variant="caption" sx={{ color: stock > 0 ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                              {outOfStock ? 'Hết hàng' : `${stock} còn lại`}
+                            <Typography variant="caption" sx={{ color: stock > 0 ? '#16a34a' : '#ea580c', fontWeight: 600 }}>
+                              {stock > 0 ? `${stock} còn lại` : '⏳ Đặt trước'}
                             </Typography>
                           </Box>
                         </Box>
@@ -359,11 +381,16 @@ export default function ProductDetailPage() {
               ) : (
                 <Button
                   fullWidth variant="contained" size="large" onClick={handleBuy}
-                  disabled={buying || product.status === 'CLOSED' || selectedStock === 0}
+                  disabled={buying || product.status === 'CLOSED'}
                   startIcon={buying ? <CircularProgress size={20} color="inherit" /> : <ShoppingCartIcon />}
-                  sx={{ bgcolor: '#eab308', color: '#854d0e', fontWeight: 800, fontSize: '1.1rem', py: 1.5, borderRadius: 1, '&:hover': { bgcolor: '#ca8a04' } }}
+                  sx={{ 
+                    bgcolor: selectedStock === 0 ? '#1e293b' : '#eab308', 
+                    color: selectedStock === 0 ? 'white' : '#854d0e', 
+                    fontWeight: 800, fontSize: '1.1rem', py: 1.5, borderRadius: 1, 
+                    '&:hover': { bgcolor: selectedStock === 0 ? '#334155' : '#ca8a04' } 
+                  }}
                 >
-                  {product.status === 'CLOSED' ? 'TẠM NGƯNG' : selectedStock === 0 ? 'HẾT HÀNG' : buying ? 'ĐANG XỬ LÝ...' : 'MUA NGAY'}
+                  {product.status === 'CLOSED' ? 'TẠM NGƯNG' : buying ? 'ĐANG XỬ LÝ...' : selectedStock === 0 ? '⏳ ĐẶT TRƯỚC NGAY' : 'MUA NGAY'}
                 </Button>
               )}
             </Paper>
@@ -373,6 +400,72 @@ export default function ProductDetailPage() {
               <Typography variant="body1" sx={{ color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
                 {product.description as string || 'Chưa có mô tả chi tiết cho gian hàng này.'}
               </Typography>
+            </Paper>
+
+            {/* ── REVIEWS SECTION ── */}
+            <Paper elevation={0} sx={{ p: 4, mt: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#0f172a' }}>ĐÁNH GIÁ TỪ KHÁCH HÀNG</Typography>
+                {reviews.length > 0 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#1e293b' }}>{Number(product.rating || 0).toFixed(1)}</Typography>
+                    <Box>
+                      <Rating value={Number(product.rating || 0)} precision={0.1} readOnly size="small" />
+                      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+                        {reviews.length} nhận xét
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
+              {reviewsLoading ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress size={24} /></Box>
+              ) : reviews.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                  <Typography variant="body2">Chưa có đánh giá nào cho gian hàng này.</Typography>
+                </Box>
+              ) : (
+                <Stack spacing={3}>
+                  {reviews.map((rev: any) => (
+                    <Box key={rev.id}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                          <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: '#f1f5f9', color: '#475569' }}>
+                            {rev.order.buyer.username.charAt(0).toUpperCase()}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1 }}>
+                              {rev.order.buyer.username}
+                            </Typography>
+                            <Rating value={rev.rating} size="small" readOnly sx={{ fontSize: '0.75rem', mt: 0.5 }} />
+                          </Box>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(rev.createdAt).toLocaleDateString('vi-VN')}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: '#334155', ml: 6 }}>
+                        {rev.comment || <i>Khách hàng không để lại nhận xét.</i>}
+                      </Typography>
+                      
+                      {rev.sellerReply && (
+                        <Box sx={{ ml: 6, mt: 2, p: 2, bgcolor: '#f8fafc', borderRadius: 2, borderLeft: '3px solid #16a34a' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#16a34a', display: 'block', mb: 0.5 }}>
+                            Phản hồi từ người bán
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#475569', fontSize: '0.85rem' }}>
+                            {rev.sellerReply}
+                          </Typography>
+                        </Box>
+                      )}
+                      <Divider sx={{ mt: 3 }} />
+                    </Box>
+                  ))}
+                </Stack>
+              )}
             </Paper>
           </Grid>
         </Grid>
@@ -387,8 +480,10 @@ export default function ProductDetailPage() {
         PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
       >
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-          <Box sx={{ fontSize: '3rem', mb: 1 }}>🎉</Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: '#16a34a' }}>Mua Hàng Thành Công!</Typography>
+          <Box sx={{ fontSize: '3rem', mb: 1 }}>{orderResult?.preOrder ? '⏳' : '🎉'}</Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: orderResult?.preOrder ? '#d97706' : '#16a34a' }}>
+            {orderResult?.preOrder ? 'Đặt Trước Thành Công!' : 'Mua Hàng Thành Công!'}
+          </Typography>
           <Typography variant="body2" color="text.secondary">
             Mã đơn hàng: <strong style={{ color: '#0f172a' }}>#{orderResult?.id?.toString().slice(-8).toUpperCase()}</strong>
           </Typography>
@@ -416,33 +511,42 @@ export default function ProductDetailPage() {
             </Box>
           </Paper>
 
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            THÔNG TIN TÀI KHOẢN ĐÃ GIAO:
-            <Button
-              size="small"
-              startIcon={<ContentCopyIcon fontSize="small" />}
-              onClick={() => {
-                navigator.clipboard.writeText(orderResult?.deliveredContent as string);
-                toast.success('Đã sao chép vào bộ nhớ tạm');
-              }}
-              sx={{ textTransform: 'none', fontWeight: 600, color: '#0284c7' }}
-            >
-              Copy Toàn Bộ
-            </Button>
-          </Typography>
-          <TextField
-            fullWidth
-            multiline
-            rows={6}
-            value={orderResult?.deliveredContent as string}
-            InputProps={{
-              readOnly: true,
-              sx: { fontFamily: 'monospace', fontSize: '0.85rem', bgcolor: '#fffbeb', borderRadius: 2 }
-            }}
-          />
-          <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#854d0e', textAlign: 'center' }}>
-            * Thông tin này cũng được lưu trong mục Quản lý đơn hàng của bạn.
-          </Typography>
+          {orderResult?.preOrder ? (
+            <Alert severity="info" sx={{ borderRadius: 2, fontSize: '0.85rem' }}>
+              <strong>Đơn đặt trước</strong> — Hàng sẽ được giao tự động khi người bán nhập kho. 
+              Bạn có thể huỷ đặt trước bất kỳ lúc nào trong trang Quản lý đơn hàng.
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                THÔNG TIN TÀI KHOẢN ĐÃ GIAO:
+                <Button
+                  size="small"
+                  startIcon={<ContentCopyIcon fontSize="small" />}
+                  onClick={() => {
+                    navigator.clipboard.writeText(orderResult?.deliveredContent as string);
+                    toast.success('Đã sao chép vào bộ nhớ tạm');
+                  }}
+                  sx={{ textTransform: 'none', fontWeight: 600, color: '#0284c7' }}
+                >
+                  Copy Toàn Bộ
+                </Button>
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={6}
+                value={orderResult?.deliveredContent as string}
+                InputProps={{
+                  readOnly: true,
+                  sx: { fontFamily: 'monospace', fontSize: '0.85rem', bgcolor: '#fffbeb', borderRadius: 2 }
+                }}
+              />
+              <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#854d0e', textAlign: 'center' }}>
+                * Thông tin này cũng được lưu trong mục Quản lý đơn hàng của bạn.
+              </Typography>
+            </>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3, justifyContent: 'center' }}>
           <Button

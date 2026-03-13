@@ -38,6 +38,7 @@ export default function StockManager({ open, onClose, productId, productTitle, i
   const [dragOver, setDragOver] = useState(false);
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([]);
   const [currentDuplicates, setCurrentDuplicates] = useState(0);
+  const [fulfilledCount, setFulfilledCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -91,6 +92,7 @@ export default function StockManager({ open, onClose, productId, productTitle, i
     setError('');
     setSuccess('');
     setCurrentDuplicates(0);
+    setFulfilledCount(0);
 
     try {
       const text = await file.text();
@@ -146,6 +148,7 @@ export default function StockManager({ open, onClose, productId, productTitle, i
         setUploadHistory(prev => [record, ...prev]);
         setSuccess(`Thêm thành công ${validLines.length} tài khoản.`);
         setCurrentDuplicates(duplicateCount);
+        setFulfilledCount(data.fulfilledPreOrders || 0);
         await loadData();
       } else {
         setError(data.error || 'Lỗi khi nạp kho');
@@ -281,8 +284,18 @@ export default function StockManager({ open, onClose, productId, productTitle, i
                 </Alert>
               )}
               {currentDuplicates > 0 && (
-                <Alert severity="error" sx={{ mb: 2, borderRadius: 2, fontWeight: 600 }} onClose={() => setCurrentDuplicates(0)}>
+                <Alert severity="error" sx={{ mb: fulfilledCount > 0 ? 1 : 2, borderRadius: 2, fontWeight: 600 }} onClose={() => setCurrentDuplicates(0)}>
                   Bỏ qua {currentDuplicates} tài khoản bị trùng lặp.
+                </Alert>
+              )}
+              {fulfilledCount > 0 && (
+                <Alert 
+                  severity="info" 
+                  icon={<InventoryIcon fontSize="small" />}
+                  sx={{ mb: 2, borderRadius: 2, fontWeight: 600, bgcolor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }} 
+                  onClose={() => setFulfilledCount(0)}
+                >
+                  Đã tự động giao {fulfilledCount} đơn hàng đặt trước!
                 </Alert>
               )}
               {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}

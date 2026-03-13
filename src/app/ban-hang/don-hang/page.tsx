@@ -21,6 +21,7 @@ import QuickChatDialog from '@/components/chat/QuickChatDialog';
 
 const STATUS_TABS = [
   { label: 'Tất cả', value: 'all' },
+  { label: 'Đặt trước', value: 'PRE_ORDER' },
   { label: 'Tạm giữ', value: 'HOLDING' },
   { label: 'Hoàn thành', value: 'COMPLETED' },
   { label: 'Khiếu nại', value: 'DISPUTED' },
@@ -89,6 +90,8 @@ export default function SellerOrdersPage() {
       case 'COMPLETED': return <Chip label="Hoàn thành" size="small" sx={{ fontWeight: 600, bgcolor: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'DISPUTED': return <Chip label="Khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'REFUNDED': return <Chip label="Hoàn tiền" size="small" sx={{ fontWeight: 600, bgcolor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'PRE_ORDER': return <Chip label="Đang chờ hàng" size="small" sx={{ fontWeight: 600, bgcolor: '#fff7ed', color: '#9a3412', border: '1px solid #ffedd5', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'CANCELLED': return <Chip label="Đã huỷ" size="small" sx={{ fontWeight: 600, bgcolor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', fontSize: '0.7rem', borderRadius: 1 }} />;
       default: return <Chip label={status} size="small" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />;
     }
   };
@@ -228,7 +231,14 @@ export default function SellerOrdersPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', color: '#2563eb', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <Typography 
+                          variant="body2" 
+                          component="a"
+                          href={`/san-pham/${order.product?.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ fontSize: '0.75rem', color: '#2563eb', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, '&:hover': { color: '#1d4ed8' } }}
+                        >
                           {order.product?.title}
                         </Typography>
                       </TableCell>

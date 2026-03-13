@@ -24,7 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (!dispute) return NextResponse.json({ error: 'Khiếu nại không tồn tại' }, { status: 404 });
     if (dispute.order.buyerId !== buyerId) return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
-    if (dispute.status !== 'OPEN') return NextResponse.json({ error: 'Khiếu nại không ở trạng thái có thể huỷ' }, { status: 400 });
+    if (dispute.status === 'CLOSED' || dispute.status === 'RESOLVED') return NextResponse.json({ error: 'Khiếu nại đã được giải quyết, không thể huỷ' }, { status: 400 });
 
     // Revert order status
     // Check if warranty expired to decide if COMPLETED or HOLDING

@@ -6,7 +6,7 @@ import SiteLayout from '@/components/layout/SiteLayout';
 import {
   Box, Container, Paper, Typography, Button, Chip, Alert,
   TextField, InputAdornment, Grid, Select, MenuItem, FormControl,
-  Skeleton, Dialog, DialogTitle, DialogContent, DialogActions
+  Skeleton, Dialog, DialogTitle, DialogContent, DialogActions, Rating
 } from '@mui/material';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import SearchIcon from '@mui/icons-material/Search';
@@ -28,6 +28,8 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
   DISPUTED:  { label: 'Khiếu nại',  color: '#dc2626', bg: '#fee2e2' },
   PENDING:   { label: 'Đang xử lý', color: '#64748b', bg: '#f1f5f9' },
   REFUNDED:  { label: 'Đã hoàn tiền', color: '#7c3aed', bg: '#f5f3ff' },
+  PRE_ORDER: { label: 'Đặt trước',  color: '#0284c7', bg: '#e0f2fe' },
+  CANCELLED: { label: 'Đã huỷ',     color: '#94a3b8', bg: '#f1f5f9' },
 };
 
 interface Order {
@@ -41,6 +43,7 @@ interface Order {
   createdAt: Date;
   variantName?: string | null;
   product?: {
+    id: string;
     title: string;
     slug: string;
     type: string;
@@ -54,6 +57,10 @@ interface Order {
     id: string;
     status: string;
   };
+  review?: {
+    rating: number;
+    comment: string | null;
+  } | null;
 }
 
 export default function OrdersPage() {
@@ -75,6 +82,13 @@ export default function OrdersPage() {
   const [disputeFaultyCount, setDisputeFaultyCount] = useState(1);
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancellingPreOrderId, setCancellingPreOrderId] = useState<string | null>(null);
+
+  // Review State
+  const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Quick Chat State
   const [chatOpen, setChatOpen] = useState(false);
@@ -267,9 +281,11 @@ export default function OrdersPage() {
             <FormControl size="small" sx={{ minWidth: 150 }}>
               <Select value={statusFilter} onChange={(e: { target: { value: string } }) => setStatusFilter(e.target.value)}>
                 <MenuItem value="all">Tất cả trạng thái</MenuItem>
+                <MenuItem value="PRE_ORDER">Đặt trước</MenuItem>
                 <MenuItem value="HOLDING">Tạm giữ</MenuItem>
                 <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
                 <MenuItem value="DISPUTED">Khiếu nại</MenuItem>
+                <MenuItem value="CANCELLED">Đã huỷ</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -351,7 +367,7 @@ export default function OrdersPage() {
                           Phòng tranh chấp
                         </Button>
                       )}
-                      {order.status === 'DISPUTED' && (!order.dispute || order.dispute.status !== 'ESCALATED') && (
+                      {order.status === 'DISPUTED' && (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <Chip label="Đang khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fee2e2', color: '#991b1b', fontSize: '0.7rem' }} />
                           <Button 
@@ -361,6 +377,72 @@ export default function OrdersPage() {
                             sx={{ fontSize: '0.7rem', fontWeight: 800, textDecoration: 'underline' }}
                           >
                             {cancellingId === order.id ? 'Đang huỷ...' : 'Huỷ khiếu nại'}
+                          </Button>
+                        </Box>
+                      )}
+                      {order.status === 'COMPLETED' && !order.review && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          onClick={() => {
+                            setReviewOrder(order);
+                            setReviewRating(5);
+                            setReviewComment('');
+                          }}
+                          sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700 }}
+                        >
+                          Đánh giá
+                        </Button>
+                      )}
+                      {order.review && (
+                        <Chip 
+                          label={`Đã đánh giá: ${order.review.rating}⭐`} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ fontWeight: 600, fontSize: '0.7rem' }} 
+                        />
+                      )}
+                      {order.status === 'PRE_ORDER' && (
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Chip label="Đang chờ hàng" size="small" sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem' }} />
+                          <Button 
+                            size="small" variant="outlined" color="error" 
+                            disabled={cancellingPreOrderId === order.id}
+                            onClick={async () => {
+                              if (!user) return;
+                              setConfirmState({
+                                open: true,
+                                title: 'Huỷ đặt trước',
+                                message: 'Bạn có chắc chắn muốn huỷ đặt trước? Tiền sẽ được hoàn lại cho bạn.',
+                                variant: 'danger',
+                                onConfirm: async () => {
+                                  setConfirmState(prev => ({ ...prev, open: false }));
+                                  setCancellingPreOrderId(order.id);
+                                  try {
+                                    const res = await fetch(`/api/orders/${order.id}/cancel-preorder`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ buyerId: user.id }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                      toast.success('Đã huỷ đặt trước và hoàn tiền!');
+                                      fetchOrders();
+                                    } else {
+                                      toast.error(data.error || 'Lỗi khi huỷ');
+                                    }
+                                  } catch {
+                                    toast.error('Lỗi kết nối');
+                                  } finally {
+                                    setCancellingPreOrderId(null);
+                                  }
+                                }
+                              });
+                            }}
+                            sx={{ borderRadius: 1.5, fontSize: '0.7rem', fontWeight: 700 }}
+                          >
+                            {cancellingPreOrderId === order.id ? 'Đang huỷ...' : 'Huỷ đặt trước'}
                           </Button>
                         </Box>
                       )}
@@ -516,6 +598,76 @@ export default function OrdersPage() {
         onClose={() => setChatOpen(false)}
         targetUser={targetChatUser}
       />
+
+      {/* Review Dialog */}
+      <Dialog 
+        open={!!reviewOrder} 
+        onClose={() => !submittingReview && setReviewOrder(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>Đánh giá sản phẩm</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, pt: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+            Bạn thấy sản phẩm <b>{reviewOrder?.product?.title}</b> thế nào?
+          </Typography>
+          <Rating
+            size="large"
+            value={reviewRating}
+            onChange={(_, val) => setReviewRating(val || 5)}
+            sx={{ color: '#f59e0b', fontSize: '3rem' }}
+          />
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Nhận xét của bạn"
+            placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+            sx={{ mt: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setReviewOrder(null)} disabled={submittingReview} color="inherit">Hủy</Button>
+          <Button
+            variant="contained"
+            disabled={submittingReview}
+            onClick={async () => {
+              if (!reviewOrder || !user) return;
+              setSubmittingReview(true);
+              try {
+                const res = await fetch('/api/reviews', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    orderId: reviewOrder.id,
+                    productId: reviewOrder.product?.id,
+                    rating: reviewRating,
+                    comment: reviewComment
+                  })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  toast.success('Cảm ơn bạn đã đánh giá!');
+                  setReviewOrder(null);
+                  fetchOrders();
+                } else {
+                  toast.error(data.error || 'Lỗi khi gửi đánh giá');
+                }
+              } catch {
+                toast.error('Lỗi kết nối');
+              } finally {
+                setSubmittingReview(false);
+              }
+            }}
+            sx={{ borderRadius: 2, fontWeight: 700, px: 3, bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' } }}
+          >
+            {submittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </SiteLayout>
   );
 }
