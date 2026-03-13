@@ -41,15 +41,19 @@ const AuthContext = createContext<AuthCtx>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('mmo_user');
-      if (stored) {
-        try { return JSON.parse(stored); } catch { return null; }
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('mmo_user');
+    if (stored) {
+      try { 
+        const parsed = JSON.parse(stored);
+        setTimeout(() => setUser(parsed), 0);
+      } catch { 
+        // Ignore JSON parse errors
       }
     }
-    return null;
-  });
+  }, []);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refreshUnreadCount = React.useCallback(async () => {

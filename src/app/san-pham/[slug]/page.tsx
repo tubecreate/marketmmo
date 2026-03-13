@@ -29,12 +29,12 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
-  const [product, setProduct] = useState<Record<string, unknown> | null>(null);
+  const [product, setProduct] = useState<any | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState('');
-  const [orderResult, setOrderResult] = useState<Record<string, unknown> | null>(null);
+  const [orderResult, setOrderResult] = useState<any | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedVar, setSelectedVar] = useState<Variant | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -151,7 +151,7 @@ export default function ProductDetailPage() {
           <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
             <MuiLink component={Link} href="/" color="inherit" sx={{ fontSize: '0.875rem' }}>Trang chủ</MuiLink>
             <MuiLink component={Link} href="/san-pham" color="inherit" sx={{ fontSize: '0.875rem' }}>{(product.category as Record<string,string>)?.name || 'Gian hàng'}</MuiLink>
-            <Typography color="text.primary" sx={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase' }}>{product.title as string}</Typography>
+            <Typography color="text.primary" sx={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase' }}>{String(product.title || '')}</Typography>
           </Breadcrumbs>
         </Container>
       </Box>
@@ -161,9 +161,7 @@ export default function ProductDetailPage() {
           {/* LEFT: Image */}
           <Grid size={{ xs: 12, md: 4.5 }}>
             <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', border: '1px solid #e2e8f0', bgcolor: 'white', mb: 2 }}>
-              <Box sx={{ position: 'absolute', top: 12, left: 0, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', px: 1.5, py: 0.5, borderTopRightRadius: 4, borderBottomRightRadius: 4, fontSize: '0.75rem', fontWeight: 700, zIndex: 2 }}>
-                KHO MARKETMMO
-              </Box>
+              {/* Removed KHO MARKETMMO tag as requested */}
               <Box sx={{ position: 'relative', width: '100%', paddingTop: '100%', bgcolor: '#1e293b' }}>
                 {product.thumbnail ? (
                   <Box component="img" src={product.thumbnail as string} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -216,12 +214,12 @@ export default function ProductDetailPage() {
           <Grid size={{ xs: 12, md: 7.5 }}>
             <Paper elevation={0} sx={{ p: { xs: 2, md: 4 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
 
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#ea580c', mb: 2, textTransform: 'uppercase', lineHeight: 1.4 }}>
-                {product.title as string}
+              <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a', mb: 2, textTransform: 'uppercase', lineHeight: 1.4 }}>
+                {String(product.title || '')}
               </Typography>
 
               {/* Price — shows selected variant price */}
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#dc2626', mb: 2 }}>
+              <Typography variant="h4" sx={{ fontWeight: 800, color: '#16a34a', mb: 2 }}>
                 {displayPrice.toLocaleString('vi-VN')} VNĐ
               </Typography>
 
@@ -241,6 +239,14 @@ export default function ProductDetailPage() {
                 <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto' }} />
                 <Typography variant="body2">Đã bán: <strong>{product.soldCount as number}</strong></Typography>
               </Box>
+
+              {product.shortDescription && (
+                <Box sx={{ mb: 2.5, p: 2, bgcolor: '#f0fdf4', borderRadius: 2, borderLeft: '4px solid #16a34a' }}>
+                  <Typography variant="body2" sx={{ color: '#166534', lineHeight: 1.6, fontWeight: 500 }}>
+                    {product.shortDescription as string}
+                  </Typography>
+                </Box>
+              )}
 
               <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, mb: 3 }}>
                 <Typography variant="body2" color="text.secondary">Người bán:</Typography>
@@ -313,7 +319,7 @@ export default function ProductDetailPage() {
                             )}
                           </Box>
                           <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 2 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#15803d' }}>
                               {v.price.toLocaleString('vi-VN')}đ
                             </Typography>
                             <Typography variant="caption" sx={{ color: stock > 0 ? '#16a34a' : '#ea580c', fontWeight: 600 }}>
@@ -339,7 +345,7 @@ export default function ProductDetailPage() {
                 </Box>
                 {selectedVar && (
                   <Typography variant="body2" color="text.secondary">
-                    Tổng: <strong style={{ color: '#dc2626' }}>{(selectedVar.price * quantity).toLocaleString('vi-VN')}đ</strong>
+                    Tổng: <strong style={{ color: '#16a34a' }}>{(selectedVar.price * quantity).toLocaleString('vi-VN')}đ</strong>
                   </Typography>
                 )}
               </Box>
@@ -384,10 +390,10 @@ export default function ProductDetailPage() {
                   disabled={buying || product.status === 'CLOSED'}
                   startIcon={buying ? <CircularProgress size={20} color="inherit" /> : <ShoppingCartIcon />}
                   sx={{ 
-                    bgcolor: selectedStock === 0 ? '#1e293b' : '#eab308', 
-                    color: selectedStock === 0 ? 'white' : '#854d0e', 
+                    bgcolor: selectedStock === 0 ? '#1e293b' : '#16a34a', 
+                    color: 'white', 
                     fontWeight: 800, fontSize: '1.1rem', py: 1.5, borderRadius: 1, 
-                    '&:hover': { bgcolor: selectedStock === 0 ? '#334155' : '#ca8a04' } 
+                    '&:hover': { bgcolor: selectedStock === 0 ? '#334155' : '#15803d' } 
                   }}
                 >
                   {product.status === 'CLOSED' ? 'TẠM NGƯNG' : buying ? 'ĐANG XỬ LÝ...' : selectedStock === 0 ? '⏳ ĐẶT TRƯỚC NGAY' : 'MUA NGAY'}
@@ -395,9 +401,20 @@ export default function ProductDetailPage() {
               )}
             </Paper>
 
-            <Paper elevation={0} sx={{ p: 4, mt: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#0f172a' }}>MÔ TẢ GIAN HÀNG</Typography>
-              <Typography variant="body1" sx={{ color: '#475569', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+            <Paper elevation={0} sx={{ p: 4, mt: 4, borderRadius: 3, border: '1px solid', borderColor: '#e2e8f0', bgcolor: 'white' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                MÔ TẢ CHI TIẾT
+              </Typography>
+              <Divider sx={{ mb: 3, borderColor: '#f1f5f9' }} />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: '#334155', 
+                  lineHeight: 1.9, 
+                  whiteSpace: 'pre-wrap', 
+                  fontSize: '0.95rem'
+                }}
+              >
                 {product.description as string || 'Chưa có mô tả chi tiết cho gian hàng này.'}
               </Typography>
             </Paper>
@@ -492,7 +509,7 @@ export default function ProductDetailPage() {
           <Paper variant="outlined" sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">Gian hàng:</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 700 }}>{product.title as string}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>{String(product.title || '')}</Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">Sản phẩm:</Typography>

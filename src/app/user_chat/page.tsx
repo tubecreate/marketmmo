@@ -298,9 +298,31 @@ export default function UserChatPage() {
   const activeRoom = rooms.find(r => r.id === activeRoomId);
 
   return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 150px)', maxWidth: 1200, mx: 'auto', mt: 4, mb: 4, borderRadius: 3, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      flex: 1,
+      minHeight: 0,
+      width: '100%',
+      maxWidth: 1400, 
+      mx: 'auto', 
+      overflow: 'hidden', 
+      border: '1px solid #e2e8f0', 
+      bgcolor: 'white',
+      mb: { xs: 0, md: 1 },
+      mt: { xs: 0, md: 1 },
+      borderRadius: { xs: 0, md: 2 },
+      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' 
+    }}>
       {/* Sidebar */}
-      <Box sx={{ width: 320, flexShrink: 0, bgcolor: '#1e293b', borderRight: '1px solid #334155', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ 
+        width: { xs: activeRoomId ? 0 : '100%', md: 320 }, 
+        flexShrink: 0, 
+        minHeight: 0,
+        bgcolor: '#1e293b', 
+        borderRight: '1px solid #334155', 
+        display: { xs: activeRoomId ? 'none' : 'flex', md: 'flex' }, 
+        flexDirection: 'column' 
+      }}>
         <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155' }}>
           <Typography variant="subtitle1" sx={{ color: 'white', fontWeight: 800 }}>Gần đây</Typography>
           <IconButton size="small" sx={{ color: '#94a3b8', bgcolor: '#334155', borderRadius: 1.5, '&:hover': { bgcolor: '#475569' } }}>
@@ -358,7 +380,13 @@ export default function UserChatPage() {
       </Box>
 
       {/* Main Chat Area */}
-      <Box sx={{ flex: 1, bgcolor: 'white', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ 
+        flex: 1, 
+        minHeight: 0,
+        bgcolor: 'white', 
+        display: { xs: !activeRoomId ? 'none' : 'flex', md: 'flex' }, 
+        flexDirection: 'column' 
+      }}>
         {activeRoomId && !activeRoom ? (
           <Box sx={{ m: 'auto', textAlign: 'center' }}>
             <CircularProgress size={40} sx={{ color: '#16a34a' }} />
@@ -378,10 +406,18 @@ export default function UserChatPage() {
         ) : (
           <>
             {/* Header */}
-            <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ p: { xs: 1.5, md: 2 }, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'white' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar sx={{ bgcolor: activeRoom.otherUser?.isSystem ? '#ea580c' : '#16a34a', width: 40, height: 40 }}>
-                  {activeRoom.otherUser?.isSystem ? <SmartToyIcon /> : activeRoom.otherUser?.username.charAt(0).toUpperCase()}
+                {/* Mobile Back Button */}
+                <IconButton 
+                  onClick={() => setActiveRoomId(null)}
+                  sx={{ display: { xs: 'flex', md: 'none' }, mr: 1, color: '#64748b' }}
+                >
+                  <Box sx={{ fontSize: '1.2rem', fontWeight: 800 }}>←</Box>
+                </IconButton>
+
+                <Avatar sx={{ bgcolor: activeRoom.otherUser?.isSystem ? '#ea580c' : '#16a34a', width: { xs: 32, md: 40 }, height: { xs: 32, md: 40 } }}>
+                  {activeRoom.otherUser?.isSystem ? <SmartToyIcon fontSize="small" /> : activeRoom.otherUser?.username.charAt(0).toUpperCase()}
                 </Avatar>
                 <Box>
                   <Typography component="div" variant="subtitle2" fontWeight={800} display="flex" alignItems="center" gap={1}>
@@ -434,11 +470,12 @@ export default function UserChatPage() {
                             </Avatar>
                           )}
                           <Paper sx={{
-                            p: 1.5, px: 2.5, maxWidth: '65%', position: 'relative',
-                            bgcolor: isMe ? '#16a34a' : 'white',
+                            p: 1.5, px: 2.5, maxWidth: { xs: '85%', md: '65%' }, position: 'relative',
+                            bgcolor: isMe ? '#16a34a' : '#f1f5f9',
                             color: isMe ? 'white' : '#1e293b',
-                            borderRadius: isMe ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                            boxShadow: 'min', border: isMe ? 'none' : '1px solid #e2e8f0'
+                            borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                            boxShadow: 'none', 
+                            border: 'none'
                           }}>
                             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                               {renderContentWithLinks(msg.content)}
@@ -467,7 +504,7 @@ export default function UserChatPage() {
                     value={newMsg}
                     onChange={e => setNewMsg(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                    InputProps={{ sx: { borderRadius: 8, bgcolor: '#f8fafc', px: 1, '& fieldset': { border: 'none' } } }}
+                    InputProps={{ sx: { borderRadius: 32, bgcolor: '#f8fafc', px: 2, '& fieldset': { border: 'none' } } }}
                   />
                   <IconButton
                     disabled={!newMsg.trim()}

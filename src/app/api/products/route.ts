@@ -22,7 +22,11 @@ export async function GET(req: Request) {
     prisma.product.findMany({
       where,
       include: { seller: { select: { username: true, isActive: true } }, category: { select: { name: true, slug: true } } },
-      orderBy: [{ isSponsored: 'desc' }, { soldCount: 'desc' }],
+      orderBy: [
+        { isSponsored: 'desc' },
+        { lastSoldAt: 'desc' },
+        { createdAt: 'desc' }
+      ],
       take: limit,
       skip: (page - 1) * limit,
     }),

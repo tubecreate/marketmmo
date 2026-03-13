@@ -4,16 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Box, Container, Button, Menu, MenuItem, alpha, Badge,
+  Box, Container, Button, Menu, MenuItem, alpha
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import HandymanIcon from '@mui/icons-material/Handyman';
-import ChatIcon from '@mui/icons-material/Chat';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import ForumIcon from '@mui/icons-material/Forum';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 interface NavItem {
   label: string;
@@ -26,10 +24,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Loại sản phẩm', href: '/loai-san-pham', icon: <ShoppingBagIcon sx={{ fontSize: 20 }} /> },
   { label: 'Loại dịch vụ', href: '/loai-dich-vu', icon: <HandymanIcon sx={{ fontSize: 20 }} /> },
-  { label: 'Tin nhắn', href: '/user_chat', icon: <ChatIcon sx={{ fontSize: 20 }} /> },
-  { label: 'Gian hàng', href: '/gian-hang', icon: <StorefrontIcon sx={{ fontSize: 20 }} /> },
+  { label: 'Gian hàng', href: '/ban-hang', icon: <StorefrontIcon sx={{ fontSize: 20 }} /> },
   { label: 'Diễn đàn', href: '/dien-dan', icon: <ForumIcon sx={{ fontSize: 20 }} /> },
-  { label: 'Đơn hàng', href: '/tai-khoan/don-hang', icon: <ShoppingCartIcon sx={{ fontSize: 20 }} /> },
 ];
 
 function DropdownNavItem({ item }: { item: NavItem }) {
@@ -97,7 +93,7 @@ function DropdownNavItem({ item }: { item: NavItem }) {
 
 export default function MainNav() {
   const pathname = usePathname();
-  const { user, unreadCount } = useAuth();
+  const { user } = useAuth();
 
   const isSeller = user?.role === 'SELLER' || user?.role === 'ADMIN';
 
@@ -170,11 +166,7 @@ export default function MainNav() {
                   '&:hover': { bgcolor: alpha('#16a34a', 0.08), color: '#16a34a' },
                 }}
               >
-                {item.label === 'Tin nhắn' ? (
-                  <Badge badgeContent={unreadCount} color="error">
-                    {item.icon}
-                  </Badge>
-                ) : item.icon}
+                {item.icon}
                 {item.label}
               </Button>
             )

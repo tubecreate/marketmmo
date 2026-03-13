@@ -8,15 +8,15 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import MenuIcon from '@mui/icons-material/Menu';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import LogoutIcon from '@mui/icons-material/Logout';
-import HistoryIcon from '@mui/icons-material/History';
-import StorefrontIcon from '@mui/icons-material/Storefront';
-import AddCardIcon from '@mui/icons-material/AddCard';
-import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
 import KeyIcon from '@mui/icons-material/Key';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import LocalMallIcon from '@mui/icons-material/LocalMall';
+import ForumIcon from '@mui/icons-material/Forum';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import AddCardIcon from '@mui/icons-material/AddCard';
+import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -153,45 +153,70 @@ export default function Header() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 2.5 }, flexShrink: 0 }}>
             {user ? (
               <>
-                <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}>
-                  <FavoriteBorderIcon sx={{ fontSize: 22 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Yêu thích</Typography>
-                </Box>
-
                 <Box
                   component={Link}
                   href="/tai-khoan/don-hang"
                   sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', textDecoration: 'none', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}
                 >
-                  <HistoryIcon sx={{ fontSize: 22 }} />
+                  <LocalMallIcon sx={{ fontSize: 24 }} />
                   <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Đơn hàng</Typography>
                 </Box>
 
                 <Box
-                  onClick={(e) => setAnchorEl(e.currentTarget)}
-                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}
+                  component={Link}
+                  href="/user_chat"
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', textDecoration: 'none', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}
                 >
                   <Badge 
                     badgeContent={unreadCount} 
                     color="error"
-                    overlap="circular"
                     sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: 16, minWidth: 16 } }}
                   >
-                    <Avatar
-                      variant="rounded"
-                      sx={{
-                        width: 24,
-                        height: 24,
-                        bgcolor: '#4cc752',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        borderRadius: '6px',
-                      }}
-                    >
-                      {user.username[0].toUpperCase()}
-                    </Avatar>
+                    <ForumIcon sx={{ fontSize: 24 }} />
                   </Badge>
-                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Tài khoản</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Tin nhắn</Typography>
+                </Box>
+
+                <Box
+                  onClick={(e) => setAnchorEl(e.currentTarget)}
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1.5,
+                    cursor: 'pointer', 
+                    p: 0.5,
+                    pr: { xs: 0.5, md: 1.5 },
+                    borderRadius: 2,
+                    border: '1px solid transparent',
+                    transition: 'all 0.2s',
+                    '&:hover': { 
+                      bgcolor: '#f8fafc',
+                      borderColor: '#e2e8f0'
+                    }
+                  }}
+                >
+                  <Avatar
+                    variant="rounded"
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      bgcolor: '#4cc752',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      borderRadius: 1.5,
+                    }}
+                  >
+                    {user.username[0].toUpperCase()}
+                  </Avatar>
+                  
+                  <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, color: '#0f172a' }}>
+                      {user.username}
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.2 }}>
+                      {user.balance.toLocaleString('vi-VN')}đ
+                    </Typography>
+                  </Box>
                 </Box>
 
                 <Menu
@@ -211,17 +236,16 @@ export default function Header() {
                   transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                   anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                 >
-                  <Box sx={{ px: 2.5, py: 1.5 }}>
+                  <Box sx={{ px: 2.5, py: 1.5, display: { md: 'none' } }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{user.username}</Typography>
                     <Typography variant="caption" color="text.secondary">{user.email}</Typography>
                     <Box sx={{ mt: 0.75, px: 1.5, py: 0.5, bgcolor: '#f0fdf4', borderRadius: 1.5 }}>
                       <Typography sx={{ fontWeight: 800, color: '#16a34a', fontSize: '0.9rem' }}>{user.balance.toLocaleString('vi-VN')}đ</Typography>
                     </Box>
                   </Box>
-                  <Divider />
+                  <Divider sx={{ display: { md: 'none' } }} />
                   {[
-                    { icon: <PersonOutlineIcon fontSize="small" />, label: 'Tài khoản', href: '/tai-khoan' },
-                    { icon: <HistoryIcon fontSize="small" />, label: 'Đơn hàng đã mua', href: '/tai-khoan/don-hang' },
+                    { icon: <PersonOutlineIcon fontSize="small" />, label: 'Cài đặt tài khoản', href: '/tai-khoan' },
                     { icon: <AddCardIcon fontSize="small" />, label: 'Nạp tiền', href: '/tai-khoan/nap-tien' },
                     { icon: <KeyIcon fontSize="small" />, label: 'Lấy 2FA', href: '/tai-khoan/lay-2fa' },
                     { icon: <MonetizationOnOutlinedIcon fontSize="small" />, label: 'Kiếm tiền', href: '/tai-khoan/kiem-tien' },

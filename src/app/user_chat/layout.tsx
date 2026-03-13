@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function UserChatLayout({ children }: { children: React.ReactNode }) {
-  return <SiteLayout>{children}</SiteLayout>;
+  return <SiteLayout hideFooter={true}>{children}</SiteLayout>;
 }

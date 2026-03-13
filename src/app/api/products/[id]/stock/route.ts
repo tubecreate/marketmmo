@@ -112,10 +112,13 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
               where: { id: { in: itemIds } },
               data: { isSold: true, soldAt: new Date() },
             }),
-            // Increment product soldCount
+            // Increment product soldCount and update activity timestamp
             prisma.product.update({
               where: { id },
-              data: { soldCount: { increment: preOrder.quantity } },
+              data: { 
+                soldCount: { increment: preOrder.quantity },
+                lastSoldAt: new Date()
+              },
             }),
           ]);
 

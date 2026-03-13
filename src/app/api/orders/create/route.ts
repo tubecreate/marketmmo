@@ -82,6 +82,11 @@ export async function POST(req: Request) {
           where: { id: product.sellerId },
           data: { holdBalance: { increment: sellerReceives } },
         }),
+        // Update product activity timestamp
+        prisma.product.update({
+          where: { id: productId },
+          data: { lastSoldAt: new Date() },
+        }),
       ]);
 
       // Send notifications
@@ -152,10 +157,13 @@ export async function POST(req: Request) {
           holdBalance: { increment: sellerReceives },
         },
       }),
-      // Increment product soldCount
+      // Increment product soldCount and update activity timestamp
       prisma.product.update({
         where: { id: productId },
-        data: { soldCount: { increment: quantity } },
+        data: { 
+          soldCount: { increment: quantity },
+          lastSoldAt: new Date()
+        },
       }),
     ]);
 
