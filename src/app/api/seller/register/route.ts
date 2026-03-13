@@ -4,17 +4,9 @@ import { prisma } from '@/lib/db';
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    console.log('Seller registration data received:', data);
-    const models = Object.keys(prisma).filter(k => !k.startsWith('_'));
-    console.log('Available models check:', {
-      total: models.length,
-      hasSellerRequest: !!(prisma as any).sellerRequest,
-      modelList: models
-    });
     const { userId, fullName, phone, facebook, cccd, bankName, bankAccount, telegram } = data;
 
     if (!userId || !fullName || !phone || !bankName || !bankAccount) {
-      console.log('Missing mandatory fields:', { userId: !!userId, fullName: !!fullName, phone: !!phone, bankName: !!bankName, bankAccount: !!bankAccount });
       return NextResponse.json({ error: 'Thiếu thông tin bắt buộc' }, { status: 400 });
     }
 
@@ -48,16 +40,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, request });
-  } catch (error: any) {
-    console.error('Seller register error details:', {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-      stack: error.stack
-    });
-    return NextResponse.json({ 
-      error: 'Lỗi hệ thống', 
-      debug: error.message 
-    }, { status: 500 });
+  } catch (error) {
+    console.error('Seller register error:', error);
+    return NextResponse.json({ error: 'Lỗi hệ thống' }, { status: 500 });
   }
 }
