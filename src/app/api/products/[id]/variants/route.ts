@@ -19,3 +19,34 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     return NextResponse.json({ error: 'Failed to fetch variants' }, { status: 500 });
   }
 }
+// POST /api/products/[id]/variants
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  try {
+    const data = await req.json();
+    const { name, price, description } = data;
+    
+    if (!name || isNaN(parseFloat(price))) {
+      return NextResponse.json({ error: 'Invalid name or price' }, { status: 400 });
+    }
+
+    const lastVariant = await prisma.productVariant.findFirst({
+      where: { productId: id },
+      orderBy: { sortOrder: 'desc' }
+    });
+    
+    const variant = await prisma.productVariant.create({
+      data: {
+        productId: id,
+        name,
+        price: parseFloat(price),
+        description: description || null,
+        sortOrder: (lastVariant?.sortOrder || 0) + 1
+      }
+    });
+
+    return NextResponse.json({ success: true, variant });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Failed to create variant' }, { status: 500 });
+  }
+}

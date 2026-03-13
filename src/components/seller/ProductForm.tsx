@@ -34,6 +34,7 @@ const PRODUCT_TYPES = [
 const STEPS = ['Thông tin cơ bản', 'Sản phẩm & Giá', 'Xác nhận'];
 
 export default function ProductForm({ open, onClose, onSuccess, product, sellerId }: ProductFormProps) {
+  const isEdit = !!product;
   const [activeStep, setActiveStep] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
 
   const [formData, setFormData] = useState({
     title: '',
+    shortDescription: '',
     description: '',
     categoryId: '',
     type: 'DIGITAL',
@@ -75,6 +77,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
       if (product) {
         setFormData({
           title: (product.title as string) || '',
+          shortDescription: (product.shortDescription as string) || '',
           description: (product.description as string) || '',
           categoryId: (product.categoryId as string) || '',
           type: (product.type as string) || 'DIGITAL',
@@ -92,7 +95,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           setVariants([{ id: '1', name: '', price: '', description: '' }]);
         }
       } else {
-        setFormData({ title: '', description: '', categoryId: '', type: 'DIGITAL', warranty: '3', thumbnail: '' });
+        setFormData({ title: '', shortDescription: '', description: '', categoryId: '', type: 'DIGITAL', warranty: '3', thumbnail: '' });
         setVariants([{ id: '1', name: '', price: '', description: '' }]);
       }
     }
@@ -187,40 +190,44 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1 }}>
-                {product ? 'Chỉnh sửa gian hàng' : 'Tạo gian hàng mới'}
+                {isEdit ? 'Chỉnh sửa gian hàng' : 'Tạo gian hàng mới'}
               </Typography>
-              <Typography variant="caption" color="text.secondary">Bước {activeStep + 1}/{STEPS.length}: {STEPS[activeStep]}</Typography>
+              {!isEdit && (
+                <Typography variant="caption" color="text.secondary">Bước {activeStep + 1}/{STEPS.length}: {STEPS[activeStep]}</Typography>
+              )}
             </Box>
           </Box>
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </Box>
       </DialogTitle>
 
-      <Box sx={{ px: 3, pb: 1.5 }}>
-        <Stepper activeStep={activeStep} alternativeLabel>
-          {STEPS.map((label, i) => {
-            const Icon = stepIcons[i];
-            return (
-              <Step key={label} completed={i < activeStep}>
-                <StepLabel
-                  StepIconComponent={() => (
-                    <Box sx={{
-                      width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      bgcolor: i < activeStep ? '#16a34a' : i === activeStep ? '#1d4ed8' : '#e2e8f0',
-                      color: i <= activeStep ? 'white' : '#94a3b8',
-                      flexShrink: 0,
-                    }}>
-                      <Icon sx={{ fontSize: 14 }} />
-                    </Box>
-                  )}
-                >
-                  <Typography variant="caption" sx={{ fontWeight: activeStep === i ? 700 : 400, fontSize: '0.7rem' }}>{label}</Typography>
-                </StepLabel>
-              </Step>
-            );
-          })}
-        </Stepper>
-      </Box>
+      {!isEdit && (
+        <Box sx={{ px: 3, pb: 1.5 }}>
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {STEPS.map((label, i) => {
+              const Icon = stepIcons[i];
+              return (
+                <Step key={label} completed={i < activeStep}>
+                  <StepLabel
+                    StepIconComponent={() => (
+                      <Box sx={{
+                        width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        bgcolor: i <= activeStep ? '#16a34a' : '#e2e8f0',
+                        color: i <= activeStep ? 'white' : '#94a3b8',
+                        flexShrink: 0,
+                      }}>
+                        <Icon sx={{ fontSize: 14 }} />
+                      </Box>
+                    )}
+                  >
+                    <Typography variant="caption" sx={{ fontWeight: activeStep === i ? 700 : 400, fontSize: '0.7rem' }}>{label}</Typography>
+                  </StepLabel>
+                </Step>
+              );
+            })}
+          </Stepper>
+        </Box>
+      )}
 
       <Divider />
 
@@ -236,7 +243,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                   width: 100, height: 100, borderRadius: 2, border: '2px dashed #e2e8f0',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   overflow: 'hidden', position: 'relative', bgcolor: '#f8fafc', flexShrink: 0,
-                  cursor: 'pointer', '&:hover': { borderColor: '#1d4ed8', bgcolor: '#f1f5f9' },
+                  cursor: 'pointer', '&:hover': { borderColor: '#16a34a', bgcolor: '#f0fdf4' },
                 }}
                 onClick={() => document.getElementById('product-image-upload')?.click()}
               >
@@ -261,6 +268,13 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                 InputProps={{ sx: { borderRadius: 2 } }}
               />
             </Box>
+            <TextField 
+              fullWidth label="Mô tả ngắn (Hiển thị ở trang chủ) *"
+              placeholder="VD: Tài khoản Netflix xem ổn định, bảo hành 1 đổi 1..."
+              value={formData.shortDescription}
+              onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+              InputProps={{ sx: { borderRadius: 2 } }}
+            />
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
               <TextField
                 select fullWidth label="Loại gian hàng *"
@@ -314,7 +328,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
             {variants.map((variant, idx) => (
               <Paper key={variant.id} variant="outlined" sx={{ p: 2.5, mb: 2, borderRadius: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Chip label={`Gói ${idx + 1}`} size="small" color="primary" sx={{ fontWeight: 700, mr: 1 }} />
+                  <Chip label={`Sản phẩm ${idx + 1}`} size="small" sx={{ fontWeight: 700, mr: 1, bgcolor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }} />
                   <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>Cấu hình sản phẩm</Typography>
                   {variants.length > 1 && (
                     <IconButton size="small" color="error" onClick={() => removeVariant(variant.id)}>
@@ -324,7 +338,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                 </Box>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 2, mb: 1.5 }}>
                   <TextField
-                    fullWidth size="small" label="Tên gói *"
+                    fullWidth size="small" label="Tên sản phẩm *"
                     placeholder="VD: Gmail 2009-2015 (Cổ)"
                     value={variant.name}
                     onChange={(e) => updateVariant(variant.id, 'name', e.target.value)}
@@ -340,8 +354,8 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                   />
                 </Box>
                 <TextField
-                  fullWidth size="small" label="Mô tả gói (Không bắt buộc)"
-                  placeholder="Thông tin thêm về gói này..."
+                  fullWidth size="small" label="Mô tả sản phẩm (Không bắt buộc)"
+                  placeholder="Thông tin thêm về sản phẩm này..."
                   value={variant.description}
                   onChange={(e) => updateVariant(variant.id, 'description', e.target.value)}
                   InputProps={{ sx: { borderRadius: 2 } }}
@@ -389,7 +403,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               {variants.map((v, i) => (
                 <Box key={v.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.2, borderBottom: i < variants.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                   <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Gói {i + 1}: {v.name}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Sản phẩm {i + 1}: {v.name}</Typography>
                     {v.description && <Typography variant="caption" color="text.secondary">{v.description}</Typography>}
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
@@ -409,37 +423,51 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
       <Divider />
 
       <DialogActions sx={{ p: 2.5, gap: 1 }}>
-        {activeStep > 0 && (
+        {!isEdit && activeStep > 0 && (
           <Button onClick={() => setActiveStep(s => s - 1)} color="inherit" sx={{ fontWeight: 700 }}>← Quay lại</Button>
         )}
         <Box sx={{ flex: 1 }} />
         <Button onClick={onClose} color="inherit" variant="outlined" sx={{ fontWeight: 700, borderRadius: 2 }}>Hủy</Button>
-        {activeStep < STEPS.length - 1 ? (
-          <Button
-            variant="contained" disableElevation
-            onClick={handleNext}
-            disabled={!canProceed() || loading}
-            sx={{ 
-              fontWeight: 800, borderRadius: 2, px: 3,
-              bgcolor: '#16a34a !important', color: 'white !important',
-              '&:hover': { bgcolor: '#15803d !important' }
-            }}
-          >
-
-            Tiếp theo →
-          </Button>
-        ) : (
+        
+        {isEdit ? (
           <Button
             variant="contained" disableElevation onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !canProceed()}
             sx={{ 
               fontWeight: 800, px: 4, borderRadius: 2, 
               bgcolor: '#16a34a !important', color: 'white !important',
               '&:hover': { bgcolor: '#15803d !important' } 
             }}
           >
-            {loading ? <CircularProgress size={20} color="inherit" /> : '🚀 Đăng ngay'}
+            {loading ? <CircularProgress size={20} color="inherit" /> : '💾 Lưu thay đổi'}
           </Button>
+        ) : (
+          activeStep < STEPS.length - 1 ? (
+            <Button
+              variant="contained" disableElevation
+              onClick={handleNext}
+              disabled={!canProceed() || loading}
+              sx={{ 
+                fontWeight: 800, borderRadius: 2, px: 3,
+                bgcolor: '#16a34a !important', color: 'white !important',
+                '&:hover': { bgcolor: '#15803d !important' }
+              }}
+            >
+              Tiếp theo →
+            </Button>
+          ) : (
+            <Button
+              variant="contained" disableElevation onClick={handleSubmit}
+              disabled={loading}
+              sx={{ 
+                fontWeight: 800, px: 4, borderRadius: 2, 
+                bgcolor: '#16a34a !important', color: 'white !important',
+                '&:hover': { bgcolor: '#15803d !important' } 
+              }}
+            >
+              {loading ? <CircularProgress size={20} color="inherit" /> : '🚀 Đăng ngay'}
+            </Button>
+          )
         )}
       </DialogActions>
     </Dialog>

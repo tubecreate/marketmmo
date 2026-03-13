@@ -13,7 +13,6 @@ import DownloadIcon from '@mui/icons-material/Download';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-
 interface StockItem { id: string; content: string; createdAt: string; variantId?: string | null; }
 interface ProductVariant { id: string; name: string; price: number; description?: string | null; }
 interface UploadRecord { filename: string; lineCount: number; successCount: number; failCount: number; timestamp: string; }
@@ -23,9 +22,10 @@ interface StockManagerProps {
   onClose: () => void;
   productId: string;
   productTitle: string;
+  initialVariantId?: string;
 }
 
-export default function StockManager({ open, onClose, productId, productTitle }: StockManagerProps) {
+export default function StockManager({ open, onClose, productId, productTitle, initialVariantId }: StockManagerProps) {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [allItems, setAllItems] = useState<StockItem[]>([]);
   const [soldItems, setSoldItems] = useState<StockItem[]>([]);
@@ -67,12 +67,15 @@ export default function StockManager({ open, onClose, productId, productTitle }:
 
   useEffect(() => {
     if (open && productId) {
+      if (initialVariantId) {
+        setSelectedVariantId(initialVariantId);
+      }
       loadData();
       setError('');
       setSuccess('');
       setRightTab(0);
     }
-  }, [open, productId, loadData]);
+  }, [open, productId, loadData, initialVariantId]);
 
   const processFile = async (file: File) => {
     if (!file.name.endsWith('.txt')) {
@@ -254,8 +257,8 @@ export default function StockManager({ open, onClose, productId, productTitle }:
             <Box sx={{ flex: '0 0 58%', p: 3, borderRight: '1px solid', borderColor: 'divider' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>Tải file dữ liệu (.txt)</Typography>
 
-              {/* Variant selector */}
-              {variants.length > 1 && (
+              {/* Variant selector - Hidden if locked */}
+              {(variants.length > 1 && !initialVariantId) && (
                 <FormControl fullWidth size="small" sx={{ mb: 2 }}>
                   <Select
                     value={selectedVariantId}
@@ -309,6 +312,9 @@ export default function StockManager({ open, onClose, productId, productTitle }:
                     <Typography variant="body1" sx={{ fontWeight: 600, color: '#334155' }}>
                       Nhấn để chọn file hoặc kéo thả
                     </Typography>
+                    <Typography variant="body2" sx={{ color: '#15803d', mb: 1 }}>
+                    <Box component="span" sx={{ fontWeight: 800 }}>⚙️ Cấu hình:</Box> Thêm sản phẩm -&gt; Chọn &quot;Kết nối API&quot; -&gt; Lưu -&gt; Bấm nút ⚙️ ở cột thao tác để nhập Key &amp; ID.
+                 </Typography>
                     <Typography variant="caption" color="text.secondary">
                       Dung lượng tối đa 10MB, định dạng .txt
                     </Typography>
@@ -318,11 +324,11 @@ export default function StockManager({ open, onClose, productId, productTitle }:
               </Paper>
 
               {/* Format guide */}
-              <Paper sx={{ p: 2, borderRadius: 2, bgcolor: '#fffbeb', border: '1px solid #fde68a' }}>
-                <Typography variant="overline" sx={{ fontWeight: 800, color: '#92400e', display: 'block', mb: 0.5 }}>
+              <Paper sx={{ p: 2, borderRadius: 2, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                <Typography variant="overline" sx={{ fontWeight: 800, color: '#166534', display: 'block', mb: 0.5 }}>
                   QUY ĐỊNH ĐỊNH DẠNG:
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#78350f', mb: 1.5, fontSize: '0.82rem' }}>
+                <Typography variant="body2" sx={{ color: '#15803d', mb: 1.5, fontSize: '0.82rem' }}>
                   Mỗi dòng trong file phải theo định dạng sau:
                 </Typography>
                 <Paper sx={{ p: 2, bgcolor: '#1e293b', borderRadius: 2 }}>
@@ -347,8 +353,8 @@ export default function StockManager({ open, onClose, productId, productTitle }:
                 onClick={() => fileInputRef.current?.click()}
                 sx={{
                   mt: 3, py: 1.5, fontWeight: 800, borderRadius: 2, fontSize: '0.95rem',
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                  '&:hover': { background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)' },
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                  '&:hover': { background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' },
                 }}
               >
                 {uploading ? 'Đang tải lên...' : '☁️ Bắt đầu tải lên'}
@@ -367,6 +373,7 @@ export default function StockManager({ open, onClose, productId, productTitle }:
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#16a34a', fontWeight: 700 }}>Tài khoản</Typography>
                   </Box>
+               {/* if (loading) return <SellerLayout><Box sx={{ p: 4 }}><Skeleton variant="rectangular" height={400} sx={{ borderRadius: 4 }} /></Box></SellerLayout>; */}
                   <Box sx={{ width: 48, height: 48, borderRadius: 2, background: 'linear-gradient(135deg, #e879f9 0%, #a855f7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <InventoryIcon sx={{ color: 'white', fontSize: 24 }} />
                   </Box>

@@ -45,6 +45,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       where: { id },
       data: {
         title: data.title,
+        shortDescription: data.shortDescription,
         description: data.description,
         price: data.price ? parseFloat(data.price) : undefined,
         priceMax: data.priceMax ? parseFloat(data.priceMax) : undefined,

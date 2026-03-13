@@ -7,17 +7,16 @@ import {
   TableCell, TableContainer, TableHead, TableRow, IconButton,
   Button, Chip, Skeleton, Tooltip, TextField, InputAdornment,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
+import TuneIcon from '@mui/icons-material/Tune';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
-import InventoryIcon from '@mui/icons-material/Inventory';
+import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 
 // New Components
 import ProductForm from '@/components/seller/ProductForm';
-import StockManager from '@/components/seller/StockManager';
 
 interface Product {
   id: string;
@@ -28,7 +27,7 @@ interface Product {
   status: string;
   createdAt: string;
   thumbnail?: string;
-  variants?: any[];
+  variants?: { id: string; name: string; price: number }[];
 }
 
 export default function SellerProductsPage() {
@@ -40,7 +39,6 @@ export default function SellerProductsPage() {
 
   // UI State
   const [formOpen, setFormOpen] = useState(false);
-  const [stockOpen, setStockOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -80,23 +78,18 @@ export default function SellerProductsPage() {
     fetchData();
   }, [user, router, fetchData]);
 
+  const handleEdit = (p: Product) => {
+    setSelectedProduct(p);
+    setFormOpen(true);
+  };
+
   const filteredProducts = products.filter(p => 
     p.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    setFormOpen(true);
-  };
-
   const handleAdd = () => {
     setSelectedProduct(null);
     setFormOpen(true);
-  };
-
-  const handleManageStock = (product: Product) => {
-    setSelectedProduct(product);
-    setStockOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -118,7 +111,7 @@ export default function SellerProductsPage() {
             <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, textTransform: 'uppercase', letterSpacing: 0.5, color: 'white' }}>Gian hàng của tôi</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(255,255,255,0.15)', px: 1.5, py: 0.8, borderRadius: 1.5 }}>
               <Typography variant="caption" sx={{ color: 'white', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                💡 Mẹo: Nhận ⚙️ để quản lý giá & tồn kho, 📝 để sửa thông tin.
+                💡 Mẹo: Nhấn ⚙️ để quản lý phân loại & tồn kho, 🗑️ để xóa gian hàng.
               </Typography>
             </Box>
           </Box>
@@ -210,35 +203,53 @@ export default function SellerProductsPage() {
                   filteredProducts.map((p) => (
                     <TableRow key={p.id} hover sx={{ '& td': { borderBottom: '1px solid #f1f5f9' } }}>
                       <TableCell sx={{ py: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <Tooltip title="Nạp kho">
-                            <IconButton 
+                          <Tooltip title="Vào quản lý chi tiết danh sách sản phẩm & kho hàng">
+                            <Button 
                               size="small" 
-                              onClick={() => handleManageStock(p)}
-                              sx={{ border: '1px solid #e2e8f0', color: '#0284c7' }}
+                              variant="outlined"
+                              component={Link}
+                              href={`/ban-hang/san-pham/${p.id}`}
+                              startIcon={<TuneIcon sx={{ fontSize: 14 }} />}
+                              sx={{ 
+                                borderRadius: 2, 
+                                fontWeight: 700,
+                                fontSize: '0.65rem',
+                                color: '#16a34a',
+                                borderColor: '#16a34a',
+                                '&:hover': { bgcolor: '#f0fdf4', borderColor: '#15803d', color: '#15803d' }
+                              }}
                             >
-                              <InventoryIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
+                              VÀO QUẢN LÝ
+                            </Button>
                           </Tooltip>
-                          <Tooltip title="Sửa">
+                          <Tooltip title="Sửa thông tin cơ bản (Tên, Ảnh, Mô tả)">
                             <IconButton 
                               size="small" 
                               onClick={() => handleEdit(p)}
-                              sx={{ border: '1px solid #e2e8f0', color: '#d97706' }}
+                              sx={{ 
+                                ml: 1,
+                                border: '1px solid #bbf7d0', 
+                                color: '#16a34a',
+                                '&:hover': { bgcolor: '#f0fdf4' }
+                              }}
                             >
                               <EditIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Xóa">
+                          <Tooltip title="Xóa gian hàng">
                             <IconButton 
                               size="small" 
                               onClick={() => handleDelete(p.id)}
-                              sx={{ border: '1px solid #e2e8f0', color: '#94a3b8' }}
+                              sx={{ 
+                                ml: 1,
+                                border: '1px solid #e2e8f0', 
+                                color: '#94a3b8',
+                                '&:hover': { color: '#ef4444', bgcolor: '#fef2f2', borderColor: '#fecaca' }
+                              }}
                             >
                               <DeleteIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                        </Box>
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -304,15 +315,6 @@ export default function SellerProductsPage() {
             onSuccess={fetchData}
             product={selectedProduct as any}
             sellerId={user.id}
-          />
-        )}
-
-        {selectedProduct && (
-          <StockManager
-            open={stockOpen}
-            onClose={() => setStockOpen(false)}
-            productId={selectedProduct.id}
-            productTitle={selectedProduct.title}
           />
         )}
       </Box>

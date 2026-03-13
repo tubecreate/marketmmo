@@ -73,6 +73,7 @@ model Product {
   categoryId   String?
   title        String
   slug         String           @unique
+  shortDescription String?
   description  String
   type         String
   price        Float

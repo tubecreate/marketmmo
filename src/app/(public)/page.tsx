@@ -58,6 +58,7 @@ export default function HomePage() {
           },
           viewCount: p.viewCount, soldCount: p.soldCount, rating: p.rating,
           isSponsored: p.isSponsored,
+          shortDescription: p.shortDescription ?? undefined,
         }));
         setAllProducts(mapped);
         setLoadingProducts(false);

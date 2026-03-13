@@ -30,6 +30,7 @@ export interface ProductCardProps {
   soldCount: number;
   rating?: number;
   isSponsored?: boolean;
+  shortDescription?: string;
 }
 
 function formatPrice(price: number): string {
@@ -67,7 +68,7 @@ function getCategoryBgColor(categoryLabel?: string): string {
 
 export default function ProductCard({
   title, slug, price, thumbnail, type, categoryLabel,
-  soldCount, rating, isSponsored,
+  soldCount, rating, isSponsored, shortDescription,
 }: ProductCardProps) {
   const isDigital = type === 'DIGITAL';
   const emoji = getCategoryEmoji(categoryLabel);
@@ -172,6 +173,23 @@ export default function ProductCard({
             >
               {title}
             </Typography>
+            {shortDescription && (
+              <Typography
+                variant="caption"
+                sx={{
+                  color: '#64748b',
+                  fontSize: '0.75rem',
+                  mt: 0.5,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 1,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  fontWeight: 500
+                }}
+              >
+                {shortDescription}
+              </Typography>
+            )}
           </Box>
 
           {/* Price Section */}
