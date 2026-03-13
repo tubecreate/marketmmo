@@ -136,8 +136,13 @@ export default function DisputeChatPage() {
             <Typography variant="body2" fontWeight={700}>{dispute.faultyCount} / {dispute.order.quantity}</Typography>
           </Box>
           <Box>
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>Giá trị</Typography>
-            <Typography variant="body2" fontWeight={800} color="error">{dispute.order.amount.toLocaleString('vi-VN')}đ</Typography>
+            <Typography variant="caption" color="text.secondary" fontWeight={700}>Giá trị khiếu nại</Typography>
+            <Typography variant="body2" fontWeight={800} color="error">
+              {((dispute.order.amount / dispute.order.quantity) * dispute.faultyCount).toLocaleString('vi-VN')}đ
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+              (Tổng đơn: {dispute.order.amount.toLocaleString('vi-VN')}đ)
+            </Typography>
           </Box>
         </Paper>
 

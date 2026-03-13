@@ -4,49 +4,32 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Box, Container, Button, Menu, MenuItem, alpha,
+  Box, Container, Button, Menu, MenuItem, alpha, Badge,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
-const productCategories = [
-  { label: 'Tất cả gian hàng', href: '/san-pham' },
-  { label: 'Tài khoản', href: '/san-pham/tai-khoan' },
-  { label: 'Key phần mềm', href: '/san-pham/key-phan-mem' },
-  { label: 'File & Tool', href: '/san-pham/file-tool' },
-  { label: 'Email accounts', href: '/san-pham/email' },
-];
-
-const serviceCategories = [
-  { label: 'Tất cả dịch vụ', href: '/dich-vu' },
-  { label: 'Thiết kế', href: '/dich-vu/thiet-ke' },
-  { label: 'Lập trình', href: '/dich-vu/lap-trinh' },
-  { label: 'Marketing', href: '/dich-vu/marketing' },
-  { label: 'Tăng tương tác', href: '/dich-vu/tang-tuong-tac' },
-];
-
-const depositItems = [
-  { label: 'Nạp qua SePay (QR)', href: '/tai-khoan/nap-tien' },
-  { label: 'Lịch sử nạp tiền', href: '/tai-khoan/nap-tien/lich-su' },
-];
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import HandymanIcon from '@mui/icons-material/Handyman';
+import ChatIcon from '@mui/icons-material/Chat';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import ForumIcon from '@mui/icons-material/Forum';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 interface NavItem {
   label: string;
   href?: string;
   children?: { label: string; href: string }[];
   highlight?: boolean;
+  icon?: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
-  { label: 'Trang chủ', href: '/' },
-  { label: 'Gian hàng', children: productCategories },
-  { label: 'Dịch vụ', children: serviceCategories },
-  { label: 'Nạp tiền', children: depositItems },
-  { label: 'Đơn Hàng', href: '/tai-khoan/don-hang' },
-  { label: 'Nhắn tin', href: '/user_chat' },
-  { label: 'Lấy 2FA', href: '/tai-khoan/lay-2fa' },
-  { label: 'Kiếm tiền', href: '/tai-khoan/kiem-tien' },
-  { label: 'Diễn đàn', href: '/dien-dan' },
-  { label: 'Đăng Ký Bán Hàng', href: '/dang-ky-ban-hang', highlight: true },
+  { label: 'Loại sản phẩm', href: '/loai-san-pham', icon: <ShoppingBagIcon sx={{ fontSize: 20 }} /> },
+  { label: 'Loại dịch vụ', href: '/loai-dich-vu', icon: <HandymanIcon sx={{ fontSize: 20 }} /> },
+  { label: 'Tin nhắn', href: '/user_chat', icon: <ChatIcon sx={{ fontSize: 20 }} /> },
+  { label: 'Gian hàng', href: '/gian-hang', icon: <StorefrontIcon sx={{ fontSize: 20 }} /> },
+  { label: 'Diễn đàn', href: '/dien-dan', icon: <ForumIcon sx={{ fontSize: 20 }} /> },
+  { label: 'Đơn hàng', href: '/tai-khoan/don-hang', icon: <ShoppingCartIcon sx={{ fontSize: 20 }} /> },
 ];
 
 function DropdownNavItem({ item }: { item: NavItem }) {
@@ -114,7 +97,7 @@ function DropdownNavItem({ item }: { item: NavItem }) {
 
 export default function MainNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, unreadCount } = useAuth();
 
   const isSeller = user?.role === 'SELLER' || user?.role === 'ADMIN';
 
@@ -173,18 +156,25 @@ export default function MainNav() {
                 component={Link}
                 href={item.href || '/'}
                 sx={{
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: 1.5,
-                  fontSize: '0.83rem',
-                  fontWeight: pathname === item.href ? 700 : 500,
-                  color: pathname === item.href ? '#16a34a' : '#334155',
+                  px: 2,
+                  py: 1.5,
+                  borderRadius: 2,
+                  fontSize: '0.875rem',
+                  fontWeight: pathname === item.href ? 700 : 600,
+                  color: pathname === item.href ? '#16a34a' : '#475569',
                   bgcolor: pathname === item.href ? alpha('#16a34a', 0.08) : 'transparent',
                   whiteSpace: 'nowrap',
                   minWidth: 'auto',
+                  flexDirection: 'column',
+                  gap: 0.5,
                   '&:hover': { bgcolor: alpha('#16a34a', 0.08), color: '#16a34a' },
                 }}
               >
+                {item.label === 'Tin nhắn' ? (
+                  <Badge badgeContent={unreadCount} color="error">
+                    {item.icon}
+                  </Badge>
+                ) : item.icon}
                 {item.label}
               </Button>
             )

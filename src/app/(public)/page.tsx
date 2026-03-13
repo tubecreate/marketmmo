@@ -2,46 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, Grid, Typography, Button, Chip,
-  alpha, Paper, IconButton, Skeleton,
+  alpha, Paper, Skeleton,
 } from '@mui/material';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import BoltIcon from '@mui/icons-material/Bolt';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ProductCard, { ProductCardProps } from '@/components/products/ProductCard';
-
-// ─── Categories ─────────────────────────────────────────────────────────────
-
-const banners = [
-  {
-    gradient: 'linear-gradient(135deg, #064e3b 0%, #065f46 40%, #047857 100%)',
-    title: 'MUA BÁN AN TOÀN',
-    subtitle: 'Cơ chế ESCROW bảo vệ 100%',
-    desc: 'Tiền được tạm giữ 03 ngày bảo hành',
-    cta: 'Xem gian hàng',
-    emoji: '🔒',
-  },
-  {
-    gradient: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 40%, #2563eb 100%)',
-    title: 'NẠP TIỀN TỰ ĐỘNG',
-    subtitle: 'Tích hợp SePay – 30 giây',
-    desc: 'Quét QR mã – số dư cộng ngay tức thì',
-    cta: 'Nạp tiền ngay',
-    emoji: '⚡',
-  },
-  {
-    gradient: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 40%, #7c3aed 100%)',
-    title: 'AI CHATBOT 24/7',
-    subtitle: 'Hỗ trợ tức thì mọi lúc mọi nơi',
-    desc: 'Tra cứu đơn hàng, tư vấn mua sắm thông minh',
-    cta: 'Chat ngay',
-    emoji: '🤖',
-  },
-];
 
 const productCategories = [
   { label: 'Tất cả', value: 'all' },
@@ -60,24 +29,18 @@ const serviceCategories = [
 ];
 
 const stats = [
-  { label: 'Người dùng', value: '15,000+', icon: <GroupsIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
-  { label: 'Gian hàng', value: '850+', icon: <BoltIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
-  { label: 'Giao dịch thành công', value: '50,000+', icon: <VerifiedUserIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
-  { label: 'Hỗ trợ 24/7', value: 'AI + Agent', icon: <SupportAgentIcon sx={{ fontSize: 28, color: '#16a34a' }} /> },
+  { label: 'Người dùng', value: '15,000+', icon: <GroupsIcon sx={{ fontSize: 28, color: '#4cc752' }} /> },
+  { label: 'Gian hàng', value: '850+', icon: <BoltIcon sx={{ fontSize: 28, color: '#4cc752' }} /> },
+  { label: 'Giao dịch thành công', value: '50,000+', icon: <VerifiedUserIcon sx={{ fontSize: 28, color: '#4cc752' }} /> },
+  { label: 'Hỗ trợ 24/7', value: 'AI + Agent', icon: <SupportAgentIcon sx={{ fontSize: 28, color: '#4cc752' }} /> },
 ];
 
 export default function HomePage() {
-  const [bannerIdx, setBannerIdx] = useState(0);
   const [mainTab, setMainTab] = useState(0);
   const [productCat, setProductCat] = useState('all');
   const [serviceCat, setServiceCat] = useState('all');
   const [allProducts, setAllProducts] = useState<ProductCardProps[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-
-  useEffect(() => {
-    const t = setInterval(() => setBannerIdx((p) => (p + 1) % banners.length), 5000);
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     fetch('/api/products?limit=20')
@@ -88,7 +51,11 @@ export default function HomePage() {
           price: p.price, priceMax: p.priceMax ?? undefined,
           type: p.type, thumbnail: p.thumbnail ?? undefined,
           categoryLabel: p.category?.name?.toUpperCase() ?? '',
-          seller: { username: p.seller?.username ?? 'n/a', isVerified: false, isOnline: p.seller?.isActive ?? false },
+          seller: { 
+            username: p.seller?.username ?? 'n/a', 
+            isVerified: false, 
+            isOnline: p.seller?.isActive ?? false 
+          },
           viewCount: p.viewCount, soldCount: p.soldCount, rating: p.rating,
           isSponsored: p.isSponsored,
         }));
@@ -106,101 +73,97 @@ export default function HomePage() {
 
   return (
     <Box>
-      {/* ─── Hero Banner ─*/}
-      <Box sx={{ position: 'relative', overflow: 'hidden', height: { xs: 200, md: 260 } }}>
-        {banners.map((b, i) => (
-          <Box
-            key={i}
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              background: b.gradient,
-              opacity: i === bannerIdx ? 1 : 0,
-              transition: 'opacity 0.7s ease',
-              display: 'flex',
-              alignItems: 'center',
-              px: { xs: 3, md: 8 },
-            }}
-          >
-            <Container maxWidth="xl">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Typography sx={{ fontSize: { xs: '2.5rem', md: '4rem' } }}>{b.emoji}</Typography>
-                <Box>
-                  <Typography
-                    variant="h4"
-                    sx={{
-                      color: 'white',
-                      fontWeight: 800,
-                      fontSize: { xs: '1.3rem', md: '2rem' },
-                      lineHeight: 1.2,
-                      mb: 0.5,
-                    }}
-                  >
-                    {b.title}
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    sx={{ color: 'rgba(255,255,255,0.85)', fontSize: { xs: '0.9rem', md: '1.15rem' }, fontWeight: 600, mb: 0.5 }}
-                  >
-                    {b.subtitle}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.65)', mb: 2, display: { xs: 'none', md: 'block' } }}>
-                    {b.desc}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    endIcon={<ArrowForwardIcon />}
-                    sx={{
-                      bgcolor: 'white',
-                      color: '#16a34a',
-                      fontWeight: 700,
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
-                      px: 2,
-                    }}
-                  >
-                    {b.cta}
-                  </Button>
-                </Box>
-              </Box>
-            </Container>
-          </Box>
-        ))}
-
-        {/* Dots */}
-        <Box sx={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 0.75 }}>
-          {banners.map((_, i) => (
-            <Box
-              key={i}
-              onClick={() => setBannerIdx(i)}
+      {/* ─── Hero Banner Grid ─*/}
+      <Container maxWidth="xl" sx={{ mt: 3, mb: 4 }}>
+        <Grid container spacing={2}>
+          {/* Main Large Banner */}
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Paper
+              elevation={0}
               sx={{
-                width: i === bannerIdx ? 20 : 8,
-                height: 8,
-                borderRadius: 4,
-                bgcolor: i === bannerIdx ? 'white' : 'rgba(255,255,255,0.4)',
+                height: { xs: 200, md: 340 },
+                background: 'linear-gradient(135deg, #064e3b 0%, #065f46 40%, #4cc752 100%)',
+                borderRadius: '16px',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                px: { xs: 3, md: 6 },
                 cursor: 'pointer',
-                transition: 'all 0.3s ease',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': { transform: 'scale(1.005)', boxShadow: '0 12px 32px rgba(76,199,82,0.15)' }
               }}
-            />
-          ))}
-        </Box>
+            >
+              <Box sx={{ zIndex: 2 }}>
+                <Typography variant="h3" sx={{ color: 'white', fontWeight: 900, fontSize: { xs: '1.5rem', md: '2.5rem' }, mb: 1 }}>
+                  MUA BÁN AN TOÀN 🛡️
+                </Typography>
+                <Typography variant="h5" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 700, mb: 1, fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                  Cơ chế ESCROW bảo vệ 100% người dùng
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', mb: 3, maxWidth: 400, display: { xs: 'none', md: 'block' } }}>
+                  Tiền của bạn chỉ được chuyển cho người bán sau khi bạn đã xác nhận nhận đúng hàng và hài lòng.
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  sx={{ bgcolor: 'white', color: '#065f46', fontWeight: 800, px: 4, py: 1.2, borderRadius: '8px', '&:hover': { bgcolor: '#f8fafc' } }}
+                >
+                  Khám phá ngay
+                </Button>
+              </Box>
+              <Box sx={{ position: 'absolute', right: -40, top: -20, opacity: 0.1, fontSize: '15rem', zIndex: 1 }}>🔒</Box>
+            </Paper>
+          </Grid>
 
-        {/* Nav arrows */}
-        <IconButton
-          onClick={() => setBannerIdx((p) => (p - 1 + banners.length) % banners.length)}
-          sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'white', bgcolor: 'rgba(0,0,0,0.2)', '&:hover': { bgcolor: 'rgba(0,0,0,0.4)' } }}
-          size="small"
-        >
-          <NavigateBeforeIcon />
-        </IconButton>
-        <IconButton
-          onClick={() => setBannerIdx((p) => (p + 1) % banners.length)}
-          sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'white', bgcolor: 'rgba(0,0,0,0.2)', '&:hover': { bgcolor: 'rgba(0,0,0,0.4)' } }}
-          size="small"
-        >
-          <NavigateNextIcon />
-        </IconButton>
-      </Box>
+          {/* Side Banners */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  flex: 1,
+                  background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)',
+                  borderRadius: '16px',
+                  p: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  '&:hover': { transform: 'translateX(4px)', boxShadow: '0 8px 16px rgba(0,0,0,0.05)' },
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 800, mb: 0.5 }}>⚡ NẠP TIỀN TỰ ĐỘNG</Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Tích hợp SePay – 30 giây có tiền</Typography>
+                <Box sx={{ position: 'absolute', right: 10, bottom: -10, opacity: 0.2, fontSize: '4rem' }}>💰</Box>
+              </Paper>
+              <Paper
+                elevation={0}
+                sx={{
+                  flex: 1,
+                  background: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)',
+                  borderRadius: '16px',
+                  p: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  '&:hover': { transform: 'translateX(4px)', boxShadow: '0 8px 16px rgba(0,0,0,0.05)' },
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 800, mb: 0.5 }}>🤖 AI CHATBOT 24/7</Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Hỗ trợ mọi lúc, mọi nơi</Typography>
+                <Box sx={{ position: 'absolute', right: 10, bottom: -10, opacity: 0.2, fontSize: '4rem' }}>🤖</Box>
+              </Paper>
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
 
       <Container maxWidth="xl" sx={{ py: 0 }}>
         {/* ─── Stats ─*/}

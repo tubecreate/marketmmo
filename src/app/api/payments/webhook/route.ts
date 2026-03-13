@@ -1,29 +1,82 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
+import { appendFileSync, mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
 
-/**
- * SEPAY WEBHOOK HANDLER
- * Documentation: https://developer.sepay.vn/en/cong-thanh-toan/API/tong-quan
- */
+export async function GET(req: Request) {
+  const tmpDir = join(process.cwd(), 'tmp');
+  if (!existsSync(tmpDir)) {
+    mkdirSync(tmpDir, { recursive: true });
+  }
+  const logFile = join(tmpDir, 'sepay_webhook.log');
+  const headers = Object.fromEntries(req.headers.entries());
+  
+  const logEntry = `\n--- WEBHOOK GET ${new Date().toISOString()} ---\n` +
+                   `Headers: ${JSON.stringify(headers, null, 2)}\n` +
+                   `---------------------------\n`;
+  appendFileSync(logFile, logEntry);
+
+  return NextResponse.json({ 
+    message: "SePay Webhook Endpoint is REACHABLE via GET",
+    time: new Date().toISOString()
+  });
+}
+
 export async function POST(req: Request) {
+  const tmpDir = join(process.cwd(), 'tmp');
+  if (!existsSync(tmpDir)) {
+    mkdirSync(tmpDir, { recursive: true });
+  }
+  const logFile = join(tmpDir, 'sepay_webhook.log');
+  
   try {
-    const data = await req.json();
-    console.log('SePay Webhook received:', data);
+    const contentType = req.headers.get('content-type') || '';
+    const rawBody = await req.text();
+    const headers = Object.fromEntries(req.headers.entries());
+    
+    let data: any = {};
+    if (contentType.includes('application/json')) {
+      try {
+        data = JSON.parse(rawBody);
+      } catch (e) {
+        console.error('Failed to parse JSON body');
+      }
+    } else {
+      const params = new URLSearchParams(rawBody);
+      params.forEach((value, key) => {
+        data[key] = value;
+      });
+    }
 
-    const authHeader = req.headers.get('authorization');
+    const logEntry = `\n--- WEBHOOK ${new Date().toISOString()} ---\n` +
+                     `Headers: ${JSON.stringify(headers, null, 2)}\n` +
+                     `Body: ${rawBody}\n` +
+                     `Data: ${JSON.stringify(data, null, 2)}\n` +
+                     `---------------------------\n`;
+    appendFileSync(logFile, logEntry);
+
+    const authHeader = headers['authorization'] || '';
     const systemConfig = await prisma.systemConfig.findUnique({ where: { id: 'default' } }) as any;
     
-    // If the user has configured a webhook secret/API key, we should verify it.
-    if (systemConfig?.sepayWebhookSecret && authHeader !== `Bearer ${systemConfig.sepayWebhookSecret}`) {
-      console.warn('Unauthorized SePay Webhook attempt');
+    const expectedSecret = systemConfig?.sepayWebhookSecret;
+    // Flexible check: case-insensitive prefix, trim spaces
+    const cleanAuth = authHeader.trim();
+    const isAuthorized = !expectedSecret || 
+                        cleanAuth === `Bearer ${expectedSecret}` || 
+                        cleanAuth.toLowerCase() === `apikey ${expectedSecret.toLowerCase()}` ||
+                        cleanAuth === `Apikey ${expectedSecret}` ||
+                        cleanAuth === expectedSecret;
+
+    if (!isAuthorized) {
+      console.warn(`Unauthorized SePay Webhook. Expected secret: ${expectedSecret?.slice(0, 10)}... Header: ${authHeader}`);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const {
-      content, // Transfer content (contains our paymentCode)
+      content,
       transferAmount,
-      id: sepayId, // SePay transaction ID
+      id: sepayId,
     } = data;
 
     if (!content) {

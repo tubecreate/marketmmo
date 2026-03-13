@@ -2,15 +2,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  AppBar, Toolbar, Box, Typography, InputBase, IconButton,
-  Badge, Avatar, Button, Menu, MenuItem, Divider, Tooltip,
-  alpha, Container,
+  AppBar, Toolbar, Box, Typography, InputBase,
+  Avatar, Button, Menu, MenuItem, Divider,
+  alpha, Container, Badge,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
+import MenuIcon from '@mui/icons-material/Menu';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LogoutIcon from '@mui/icons-material/Logout';
 import HistoryIcon from '@mui/icons-material/History';
@@ -23,7 +21,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, unreadCount } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -34,17 +32,32 @@ export default function Header() {
       sx={{
         bgcolor: 'white',
         color: 'text.primary',
-        borderBottom: '2px solid',
-        borderColor: '#16a34a',
+        borderBottom: '1px solid #e2e8f0',
         zIndex: 1100,
       }}
     >
+      {/* Top Utility Bar */}
+      <Box sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: { xs: 'none', md: 'block' } }}>
+        <Container maxWidth="xl">
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', cursor: 'pointer', '&:hover': { color: '#4cc752' } }}>Tiếng Việt · VNĐ</Typography>
+            </Box>
+            <Box>
+              <Link href="/dang-ky-ban-hang" style={{ textDecoration: 'none' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, '&:hover': { color: '#4cc752' } }}>Bắt đầu bán hàng</Typography>
+              </Link>
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+
       <Container maxWidth="xl">
         <Toolbar
           disableGutters
           sx={{
-            gap: 3,
-            minHeight: { xs: 70, sm: 80 },
+            gap: { xs: 1, md: 3 },
+            minHeight: { xs: 64, sm: 80 },
             py: 1,
             mx: 'auto',
           }}
@@ -54,34 +67,53 @@ export default function Header() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box
                 sx={{
-                  width: 40,
-                  height: 40,
+                  width: { xs: 32, md: 40 },
+                  height: { xs: 32, md: 40 },
                   borderRadius: 2,
-                  background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
+                  background: 'linear-gradient(135deg, #4cc752 0%, #22c55e 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(22,163,74,0.35)',
+                  boxShadow: '0 2px 8px rgba(76,199,82,0.35)',
                   flexShrink: 0,
                 }}
               >
-                <StorefrontIcon sx={{ color: 'white', fontSize: 22 }} />
+                <StorefrontIcon sx={{ color: 'white', fontSize: { xs: 18, md: 22 } }} />
               </Box>
               <Typography
                 variant="h6"
                 sx={{
-                  fontWeight: 800,
+                  fontWeight: 900,
                   letterSpacing: -0.5,
                   lineHeight: 1,
-                  fontSize: '1.25rem',
-                  display: { xs: 'none', sm: 'block' },
+                  fontSize: { xs: '1.1rem', md: '1.5rem' },
                 }}
               >
-                <Box component="span" sx={{ color: '#16a34a' }}>MARKET</Box>
-                <Box component="span" sx={{ color: '#0f172a' }}>MMO</Box>
+                <Box component="span" sx={{ color: '#4cc752' }}>GG</Box>
+                <Box component="span" sx={{ color: '#0f172a' }}>SEL</Box>
               </Typography>
             </Box>
           </Link>
+
+          {/* Catalog Button */}
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<MenuIcon />}
+            sx={{
+              display: { xs: 'none', md: 'flex' },
+              bgcolor: '#eff1f3',
+              color: '#0f172a',
+              textTransform: 'none',
+              fontWeight: 700,
+              borderRadius: 2,
+              px: 2.5,
+              height: 48,
+              '&:hover': { bgcolor: '#e5e7eb' },
+            }}
+          >
+            Danh mục
+          </Button>
 
           {/* Search Bar */}
           <Box
@@ -94,119 +126,72 @@ export default function Header() {
             }}
             sx={{
               flex: 1,
-              maxWidth: 600,
               display: 'flex',
               alignItems: 'center',
-              bgcolor: '#f8fafc',
-              border: '1.5px solid',
-              borderColor: '#e2e8f0',
-              borderRadius: '10px',
-              px: 1.5,
-              height: 44,
+              bgcolor: '#eff1f3',
+              borderRadius: '12px',
+              px: 2,
+              height: { xs: 40, md: 48 },
               transition: 'all 0.2s ease',
               '&:focus-within': {
-                borderColor: '#16a34a',
                 bgcolor: 'white',
-                boxShadow: `0 0 0 3px ${alpha('#16a34a', 0.12)}`,
+                boxShadow: `0 0 0 2px ${alpha('#4cc752', 0.2)}`,
+                border: '1px solid #4cc752',
               },
             }}
           >
             <SearchIcon sx={{ color: '#94a3b8', fontSize: 20, mr: 1, flexShrink: 0 }} />
             <InputBase
-              placeholder="Tìm gian hàng hoặc người bán..."
+              placeholder="Tìm kiếm sản phẩm..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ flex: 1, fontSize: '0.875rem', color: 'text.primary' }}
             />
-            <Button
-              type="submit"
-              variant="contained"
-              disableElevation
-              sx={{
-                minWidth: 72,
-                height: 32,
-                borderRadius: '7px',
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                ml: 1,
-                flexShrink: 0,
-                px: 2,
-              }}
-            >
-              Tìm
-            </Button>
           </Box>
 
-          {/* Right side */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0, ml: 'auto' }}>
+          {/* Right side - User Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 2.5 }, flexShrink: 0 }}>
             {user ? (
               <>
-                <Tooltip title="Chat">
-                  <Link href="/user_chat" style={{ color: 'inherit' }}>
-                    <IconButton size="medium" sx={{ color: '#475569' }}>
-                      <Badge color="primary" variant="dot">
-                        <ChatBubbleOutlineIcon sx={{ fontSize: 22 }} />
-                      </Badge>
-                    </IconButton>
-                  </Link>
-                </Tooltip>
+                <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}>
+                  <FavoriteBorderIcon sx={{ fontSize: 22 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Yêu thích</Typography>
+                </Box>
 
-                <Tooltip title="Giỏ hàng">
-                  <IconButton size="medium" sx={{ color: '#475569' }}>
-                    <Badge badgeContent={3} color="primary">
-                      <ShoppingCartOutlinedIcon sx={{ fontSize: 22 }} />
-                    </Badge>
-                  </IconButton>
-                </Tooltip>
+                <Box
+                  component={Link}
+                  href="/tai-khoan/don-hang"
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', textDecoration: 'none', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}
+                >
+                  <HistoryIcon sx={{ fontSize: 22 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Đơn hàng</Typography>
+                </Box>
 
-                <Tooltip title="Yêu thích">
-                  <IconButton size="medium" sx={{ color: '#475569' }}>
-                    <FavoriteBorderIcon sx={{ fontSize: 22 }} />
-                  </IconButton>
-                </Tooltip>
-
-                <Tooltip title="Nạp tiền vào tài khoản">
-                  <Box
-                    component={Link}
-                    href="/tai-khoan/nap-tien"
-                    sx={{
-                      display: { xs: 'none', lg: 'flex' },
-                      alignItems: 'center',
-                      gap: 0.75,
-                      px: 2,
-                      py: 0.75,
-                      bgcolor: '#f0fdf4',
-                      border: '1px solid #bbf7d0',
-                      borderRadius: 3,
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      '&:hover': { bgcolor: '#dcfce7' },
-                    }}
-                  >
-                    <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 18, color: '#16a34a' }} />
-                    <Typography sx={{ fontWeight: 700, color: '#16a34a', fontSize: '0.85rem' }}>
-                      {user.balance.toLocaleString('vi-VN')}đ
-                    </Typography>
-                  </Box>
-                </Tooltip>
-
-                {/* Avatar */}
                 <Box
                   onClick={(e) => setAnchorEl(e.currentTarget)}
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', ml: 0.5 }}
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}
                 >
-                  <Avatar
-                    sx={{
-                      width: 38,
-                      height: 38,
-                      bgcolor: '#16a34a',
-                      fontSize: '0.9rem',
-                      fontWeight: 700,
-                      border: '2px solid #22c55e',
-                    }}
+                  <Badge 
+                    badgeContent={unreadCount} 
+                    color="error"
+                    overlap="circular"
+                    sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: 16, minWidth: 16 } }}
                   >
-                    {user.username[0].toUpperCase()}
-                  </Avatar>
+                    <Avatar
+                      variant="rounded"
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        bgcolor: '#4cc752',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        borderRadius: '6px',
+                      }}
+                    >
+                      {user.username[0].toUpperCase()}
+                    </Avatar>
+                  </Badge>
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Tài khoản</Typography>
                 </Box>
 
                 <Menu
@@ -256,7 +241,6 @@ export default function Header() {
                       {item.label}
                     </MenuItem>
                   ))}
-                  {/* Seller registration or dashboard link management */}
                   {user.role === 'BUYER' && (!user.sellerRequest || user.sellerRequest.status === 'REJECTED') && (
                     <>
                       <Divider />
@@ -270,24 +254,6 @@ export default function Header() {
                       </MenuItem>
                     </>
                   )}
-                  {user.sellerRequest?.status === 'PENDING' && (
-                    <>
-                      <Divider />
-                      <MenuItem
-                        disabled
-                        sx={{ gap: 1.5, py: 1, color: '#f59e0b', fontWeight: 600, fontSize: '0.875rem', opacity: 1 }}
-                      >
-                        <StorefrontIcon fontSize="small" /> Chờ duyệt bán hàng
-                      </MenuItem>
-                    </>
-                  )}
-                  <Divider />
-                  <MenuItem
-                    onClick={() => { setAnchorEl(null); logout(); }}
-                    sx={{ gap: 1.5, py: 1, color: '#dc2626', fontSize: '0.875rem' }}
-                  >
-                    <LogoutIcon fontSize="small" /> Đăng xuất
-                  </MenuItem>
                   {user.role === 'ADMIN' && (
                     <>
                       <Divider />
@@ -301,40 +267,19 @@ export default function Header() {
                       </MenuItem>
                     </>
                   )}
+                  <Divider />
+                  <MenuItem
+                    onClick={() => { setAnchorEl(null); logout(); }}
+                    sx={{ gap: 1.5, py: 1, color: '#dc2626', fontSize: '0.875rem' }}
+                  >
+                    <LogoutIcon fontSize="small" /> Đăng xuất
+                  </MenuItem>
                 </Menu>
               </>
             ) : (
-              <Box sx={{ display: 'flex', gap: 1.5 }}>
-                <Button
-                  component={Link}
-                  href="/dang-nhap"
-                  variant="outlined"
-                  sx={{
-                    borderRadius: 2,
-                    borderColor: '#16a34a',
-                    color: '#16a34a',
-                    px: 2.5,
-                    py: 0.75,
-                    fontWeight: 600,
-                    '&:hover': { bgcolor: '#f0fdf4', borderColor: '#15803d' },
-                  }}
-                >
-                  Đăng nhập
-                </Button>
-                <Button
-                  component={Link}
-                  href="/dang-ky"
-                  variant="contained"
-                  disableElevation
-                  sx={{
-                    borderRadius: 2,
-                    px: 2.5,
-                    py: 0.75,
-                    fontWeight: 600,
-                  }}
-                >
-                  Đăng ký
-                </Button>
+              <Box component={Link} href="/dang-nhap" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', textDecoration: 'none', '&:hover': { color: '#0f172a' } }}>
+                <PersonOutlineIcon sx={{ fontSize: 24 }} />
+                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem' }}>Login</Typography>
               </Box>
             )}
           </Box>

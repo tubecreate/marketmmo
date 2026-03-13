@@ -24,6 +24,9 @@ export default function DepositPage() {
   const [error, setError] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const { refreshUser } = useAuth();
+  const pollingRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const fetchHistory = React.useCallback(async () => {
     if (!user) return;
@@ -40,7 +43,32 @@ export default function DepositPage() {
 
   useEffect(() => {
     fetchHistory();
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, [fetchHistory]);
+
+  const startPolling = (paymentCode: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/payments/status?paymentCode=${paymentCode}`);
+        const data = await res.json();
+        
+        if (data.status === 'SUCCESS') {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setIsSuccess(true);
+          setPaymentData(null); // Return to amount entry
+          setLoading(false);
+          refreshUser();
+          fetchHistory();
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 5000); // Check every 5 seconds
+  };
 
   const handleCreatePayment = async () => {
     if (!amount || parseInt(amount) < 10000) {
@@ -49,6 +77,7 @@ export default function DepositPage() {
     }
     setLoading(true);
     setError(null);
+    setIsSuccess(false); // Reset success state for new attempt
     try {
       const res = await fetch('/api/payments/create', {
         method: 'POST',
@@ -59,19 +88,19 @@ export default function DepositPage() {
       if (data.success) {
         setPaymentData(data);
         fetchHistory(); // Refresh history to show pending
+        // Start polling for this specific payment
+        startPolling(data.paymentCode);
       } else {
-        setError(data.error || 'Có lỗi xảy ra');
+        setError(data.error || 'Có lỗi xảy ra khi khởi tạo thanh toán');
+        setLoading(false);
       }
     } catch (err) {
       setError('Không thể kết nối đến máy chủ');
-    } finally {
       setLoading(false);
     }
   };
 
-  const qrUrl = paymentData ? 
-    `https://img.vietqr.io/image/${paymentData.bankInfo.bankName.replace(/ /g, '')}-${paymentData.bankInfo.accountNumber}-compact.png?amount=${paymentData.amount}&addInfo=${paymentData.paymentCode}&accountName=${encodeURIComponent(paymentData.bankInfo.accountHolder)}` 
-    : '';
+  const qrUrl = paymentData?.qrUrl || '';
 
   return (
     <SiteLayout>
@@ -85,11 +114,30 @@ export default function DepositPage() {
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, md: 7 }}>
             <Paper sx={{ p: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+              {isSuccess && (
+                <Alert 
+                  severity="success" 
+                  sx={{ 
+                    mb: 3, 
+                    borderRadius: 2, 
+                    py: 2, 
+                    border: '1px solid #cef7da', 
+                    bgcolor: '#f0fdf4',
+                    '& .MuiAlert-icon': { fontSize: '2rem', alignItems: 'center' }
+                  }}
+                >
+                  <Typography variant="h6" fontWeight={800} color="#166534">Nạp tiền thành công!</Typography>
+                  <Typography variant="body2" color="#166534">
+                    Hệ thống đã nhận được tiền và cộng vào số dư của bạn. Cảm ơn bạn đã sử dụng dịch vụ!
+                  </Typography>
+                </Alert>
+              )}
+
               <Typography variant="h5" fontWeight={800} gutterBottom display="flex" alignItems="center" gap={1.5}>
                 <AccountBalanceWalletIcon color="primary" /> Nạp tiền vào tài khoản
               </Typography>
               <Typography variant="body2" color="text.secondary" mb={4}>
-                Hệ thống nạp tiền tự động qua ngân hàng 24/7. Tiền sẽ được cộng vào tài khoản sau 1-3 phút.
+                Hệ thống nạp tiền tự động 24/7 thông qua cổng thanh toán SePay. Tiền sẽ được cộng vào tài khoản sau 1-3 phút.
               </Typography>
 
               {!paymentData ? (
@@ -133,25 +181,25 @@ export default function DepositPage() {
                     disabled={loading || !user}
                     sx={{ py: 1.5, borderRadius: 2, fontWeight: 700, fontSize: '1.1rem' }}
                   >
-                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Tiếp tục thanh toán'}
+                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Tạo mã thanh toán'}
                   </Button>
                 </>
               ) : (
                 <Box>
                   <Alert severity="success" sx={{ mb: 4, borderRadius: 2 }}>
-                    Vui lòng chuyển đúng số tiền và nội dung bên dưới để được cộng tiền tự động.
+                    Mã thanh toán đã được tạo. Vui lòng quét mã QR hoặc chuyển khoản thủ công theo thông tin bên dưới để nạp tiền.
                   </Alert>
 
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Typography variant="caption" color="text.secondary" display="block">NGÂN HÀNG</Typography>
-                      <Typography variant="body1" fontWeight={700} gutterBottom>{paymentData.bankInfo.bankName}</Typography>
+                      <Typography variant="body1" fontWeight={700} gutterBottom>{paymentData.bankInfo?.bankName}</Typography>
                       
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>SỐ TÀI KHOẢN</Typography>
-                      <Typography variant="h6" fontWeight={800} color="primary" gutterBottom>{paymentData.bankInfo.accountNumber}</Typography>
+                      <Typography variant="h6" fontWeight={800} color="primary" gutterBottom>{paymentData.bankInfo?.accountNumber}</Typography>
                       
                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>CHỦ TÀI KHOẢN</Typography>
-                      <Typography variant="body1" fontWeight={700} gutterBottom>{paymentData.bankInfo.accountHolder}</Typography>
+                      <Typography variant="body1" fontWeight={700} gutterBottom>{paymentData.bankInfo?.accountHolder}</Typography>
 
                       <Divider sx={{ my: 2 }} />
                       
@@ -168,10 +216,19 @@ export default function DepositPage() {
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                       <Box sx={{ p: 2, bgcolor: 'white', border: '1px solid #e2e8f0', borderRadius: 3, mb: 1, textAlign: 'center' }}>
-                        <img src={qrUrl} alt="VietQR" style={{ width: '100%', maxWidth: 200 }} />
-                        <Typography variant="caption" display="block" color="text.secondary" mt={1}>Quét mã để thanh toán nhanh</Typography>
+                        {qrUrl ? (
+                          <img src={qrUrl} alt="SePay QR" style={{ width: '100%', maxWidth: 200 }} />
+                        ) : (
+                          <Box sx={{ width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc' }}>
+                            <CircularProgress size={24} />
+                          </Box>
+                        )}
+                        <Typography variant="caption" display="block" color="text.secondary" mt={1}>
+                          Quét mã để thanh toán nhanh<br/>
+                          (Hỗ trợ mọi ứng dụng Ngân hàng)
+                        </Typography>
                       </Box>
-                      <Button variant="text" size="small" startIcon={<QrCode2Icon />} onClick={() => setPaymentData(null)}>
+                      <Button variant="text" size="small" sx={{ mt: 1 }} startIcon={<QrCode2Icon />} onClick={() => { setPaymentData(null); setIsSuccess(false); }}>
                         Đổi số tiền nạp
                       </Button>
                     </Grid>
@@ -180,8 +237,8 @@ export default function DepositPage() {
                   <Box sx={{ mt: 4, p: 2, bgcolor: '#fff7ed', borderRadius: 2, display: 'flex', gap: 2 }}>
                     <InfoIcon sx={{ color: '#ea580c' }} />
                     <Typography variant="body2" color="#9a3412">
-                      <strong>Lưu ý:</strong> Tiền sẽ được cộng tự động sau 1-5 phút khi hệ thống nhận được tiền. 
-                      Nếu sau 15 phút chưa thấy cộng tiền, vui lòng liên hệ Admin kèm theo ảnh chụp biên lai.
+                      <strong>Lưu ý:</strong> Tiền sẽ được cộng tự động sau 1-5 phút khi hệ thống nhận được thông báo từ SePay. 
+                      Luôn phải ghi đúng nội dung chuyển khoản.
                     </Typography>
                   </Box>
                 </Box>

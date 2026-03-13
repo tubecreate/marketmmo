@@ -22,32 +22,71 @@ interface AuthUser {
 
 interface AuthCtx {
   user: AuthUser | null;
+  unreadCount: number;
   login: (identifier: string, password: string) => Promise<{ error?: string }>;
   register: (username: string, email: string, password: string) => Promise<{ error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  refreshUnreadCount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthCtx>({
   user: null,
+  unreadCount: 0,
   login: async () => ({}),
   register: async () => ({}),
   logout: () => {},
   refreshUser: async () => {},
+  refreshUnreadCount: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('mmo_user');
+      if (stored) {
+        try { return JSON.parse(stored); } catch { return null; }
+      }
+    }
+    return null;
+  });
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const refreshUnreadCount = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/chat/rooms?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const total = (data.rooms || []).reduce((sum: number, r: { unreadCount?: number }) => sum + (r.unreadCount || 0), 0);
+        setUnreadCount(total);
+      }
+    } catch (e: unknown) { 
+      const error = e as Error;
+      console.error('Lỗi lấy unread count:', error.message); 
+    }
+  }, [user]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('mmo_user');
-    if (stored) {
-      try { 
-        const parsed = JSON.parse(stored);
-        if (parsed) setUser(parsed);
-      } catch { /* ignore */ }
+    let interval: NodeJS.Timeout;
+    if (user) {
+      // First call after a tiny delay to avoid 'synchronous setState' lint
+      const timeout = setTimeout(() => {
+        refreshUnreadCount();
+      }, 0);
+      
+      interval = setInterval(refreshUnreadCount, 30000);
+      return () => {
+        clearTimeout(timeout);
+        clearInterval(interval);
+      };
+    } else {
+      const timeout = setTimeout(() => {
+        setUnreadCount(0);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
-  }, []);
+  }, [user, refreshUnreadCount]);
 
   const refreshUser = async () => {
     const stored = localStorage.getItem('mmo_user');
@@ -90,11 +129,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    setUnreadCount(0);
     localStorage.removeItem('mmo_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, unreadCount, login, register, logout, refreshUser, refreshUnreadCount }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,13 +3,11 @@ import React from 'react';
 import Link from 'next/link';
 import {
   Card, CardContent, CardMedia, Box, Typography,
-  Avatar,
 } from '@mui/material';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import BoltIcon from '@mui/icons-material/Bolt';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
-import VerifiedIcon from '@mui/icons-material/Verified';
-import CircleIcon from '@mui/icons-material/Circle';
+import IconButton from '@mui/material/IconButton';
 
 export interface ProductCardProps {
   id: string;
@@ -35,9 +33,7 @@ export interface ProductCardProps {
 }
 
 function formatPrice(price: number): string {
-  if (price >= 1000000) return `${(price / 1000000).toFixed(1)}tr`;
-  if (price >= 1000) return `${(price / 1000).toFixed(0)}k`;
-  return `${price}`;
+  return price.toLocaleString('vi-VN');
 }
 
 // Emoji thumbnails based on category keyword
@@ -70,8 +66,8 @@ function getCategoryBgColor(categoryLabel?: string): string {
 }
 
 export default function ProductCard({
-  title, slug, price, priceMax, thumbnail, type, categoryLabel,
-  seller, viewCount, soldCount, rating, isSponsored,
+  title, slug, price, thumbnail, type, categoryLabel,
+  soldCount, rating, isSponsored,
 }: ProductCardProps) {
   const isDigital = type === 'DIGITAL';
   const emoji = getCategoryEmoji(categoryLabel);
@@ -79,237 +75,146 @@ export default function ProductCard({
 
   return (
     <Card
-      component={Link}
-      href={`/san-pham/${slug}`}
       sx={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
         textDecoration: 'none',
-        border: '1px solid #e2e8f0',
-        borderRadius: 2,
+        border: '1px solid #f1f5f9',
+        borderRadius: '12px',
         overflow: 'hidden',
         bgcolor: 'white',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
-          borderColor: '#16a34a',
-          boxShadow: '0 6px 20px rgba(22,163,74,0.14)',
-          transform: 'translateY(-2px)',
+          borderColor: '#4cc752',
+          boxShadow: '0 12px 24px rgba(0,0,0,0.06)',
+          transform: 'translateY(-4px)',
+          '& .buy-button': { bgcolor: '#3fb345' }
         },
         position: 'relative',
       }}
     >
-      {/* Thumbnail */}
-      <Box sx={{ position: 'relative', height: 180, flexShrink: 0, overflow: 'hidden' }}>
-        {thumbnail ? (
-          <CardMedia
-            component="img"
-            image={thumbnail}
-            alt={title}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              background: bgColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '3rem',
-            }}
-          >
-            {emoji}
-          </Box>
-        )}
+      {/* Favorite Icon */}
+      <IconButton 
+        size="small"
+        sx={{ 
+          position: 'absolute', 
+          top: 10, 
+          right: 10, 
+          zIndex: 10, 
+          bgcolor: 'rgba(255,255,255,0.9)',
+          backdropFilter: 'blur(4px)',
+          '&:hover': { bgcolor: 'white', color: '#ef4444' },
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        }}
+      >
+        <FavoriteBorderIcon fontSize="small" sx={{ fontSize: 18 }} />
+      </IconButton>
 
-        {/* Top badges row */}
-        <Box sx={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          {/* Category label (left) */}
-          {categoryLabel && (
+      <Link href={`/san-pham/${slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* Thumbnail */}
+        <Box sx={{ position: 'relative', height: 160, flexShrink: 0, overflow: 'hidden', bgcolor: '#f8fafc' }}>
+          {thumbnail ? (
+            <CardMedia
+              component="img"
+              image={thumbnail}
+              alt={title}
+              sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+            />
+          ) : (
             <Box
               sx={{
-                bgcolor: 'rgba(0,0,0,0.55)',
-                backdropFilter: 'blur(4px)',
-                color: 'white',
-                fontSize: '0.6rem',
-                fontWeight: 700,
-                px: 0.6,
-                py: 0.15,
-                borderRadius: 1,
-                letterSpacing: 0.3,
-                maxWidth: '65%',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
+                width: '100%',
+                height: '100%',
+                background: bgColor,
+                opacity: 0.9,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2.5rem',
               }}
             >
-              {categoryLabel.toUpperCase()}
+              {emoji}
             </Box>
           )}
-          {/* Sponsored badge (right) */}
-          {isSponsored && (
-            <Box
-              sx={{
-                bgcolor: '#f59e0b',
-                color: 'white',
-                fontSize: '0.6rem',
-                fontWeight: 700,
-                px: 0.75,
-                py: 0.25,
-                borderRadius: 1,
-                letterSpacing: 0.3,
-                ml: 'auto',
-              }}
-            >
-              TÀI TRỢ
-            </Box>
-          )}
-        </Box>
 
-        {/* Bottom type badge */}
-        <Box sx={{ position: 'absolute', bottom: 8, left: 8 }}>
-          <Box
-            sx={{
-              bgcolor: isDigital ? '#16a34a' : '#7c3aed',
-              color: 'white',
-              fontSize: '0.58rem',
-              fontWeight: 700,
-              px: 0.75,
-              py: 0.2,
-              borderRadius: 1,
-              letterSpacing: 0.5,
-            }}
-          >
-            {isDigital ? 'GIAN HÀNG' : 'DỊCH VỤ'}
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Content */}
-      <CardContent sx={{ p: 1.5, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75, '&:last-child': { pb: 1.5 } }}>
-        {/* Seller row */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <Box sx={{ position: 'relative', flexShrink: 0 }}>
-            <Avatar
-              src={seller.avatar}
-              sx={{
-                width: 20,
-                height: 20,
-                fontSize: '0.65rem',
-                bgcolor: '#16a34a',
-                fontWeight: 700,
-              }}
-            >
-              {seller.username[0].toUpperCase()}
-            </Avatar>
-            {seller.isOnline && (
-              <CircleIcon
-                sx={{
-                  position: 'absolute',
-                  bottom: -1,
-                  right: -1,
-                  fontSize: 8,
-                  color: '#22c55e',
-                  bgcolor: 'white',
-                  borderRadius: '50%',
-                }}
-              />
+          {/* Badges Overlay */}
+          <Box sx={{ position: 'absolute', bottom: 8, left: 8, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {isSponsored && (
+              <Box sx={{ bgcolor: '#f59e0b', color: 'white', fontSize: '0.6rem', fontWeight: 800, px: 0.8, py: 0.3, borderRadius: '4px', textTransform: 'uppercase' }}>GIẢM GIÁ</Box>
             )}
-          </Box>
-          <Typography
-            variant="caption"
-            sx={{ fontSize: '0.72rem', fontWeight: 600, color: '#475569', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          >
-            {seller.username}
-          </Typography>
-          {seller.isVerified && (
-            <VerifiedIcon sx={{ fontSize: 13, color: '#16a34a', flexShrink: 0 }} />
-          )}
-          {seller.isOnline ? (
-            <Box
-              sx={{
-                bgcolor: '#dcfce7',
-                color: '#16a34a',
-                fontSize: '0.58rem',
-                fontWeight: 700,
-                px: 0.6,
-                py: 0.1,
-                borderRadius: 0.75,
-                flexShrink: 0,
-              }}
-            >
-              ONLINE
+            <Box sx={{ bgcolor: '#0ea5e9', color: 'white', fontSize: '0.6rem', fontWeight: 800, px: 0.8, py: 0.3, borderRadius: '4px', display: 'flex', alignItems: 'center', gap: 0.3, textTransform: 'uppercase' }}>
+              <BoltIcon sx={{ fontSize: 10 }} /> GIAO NHANH
             </Box>
-          ) : seller.lastActive ? (
-            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.65rem', flexShrink: 0 }}>
-              {seller.lastActive}
-            </Typography>
-          ) : null}
+          </Box>
         </Box>
 
-        {/* Title */}
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: 600,
-            fontSize: '0.82rem',
-            lineHeight: 1.45,
-            color: '#0f172a',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            minHeight: '2.4rem',
-            flex: 1,
-          }}
-        >
-          {title}
-        </Typography>
+        {/* Content */}
+        <CardContent sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', gap: 1, '&:last-child': { pb: 2 } }}>
+          <Box>
+            <Typography variant="caption" sx={{ color: isDigital ? '#4cc752' : '#7c3aed', fontWeight: 800, fontSize: '0.6rem', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+              {isDigital ? 'SẢN PHẨM SỐ' : 'DỊCH VỤ TÀI KHOẢN'}
+            </Typography>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                lineHeight: 1.3,
+                color: '#1e293b',
+                mt: 0.5,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                minHeight: '2.3rem',
+              }}
+            >
+              {title}
+            </Typography>
+          </Box>
 
-        {/* Stats row */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-            <VisibilityOutlinedIcon sx={{ fontSize: 12, color: '#94a3b8' }} />
-            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
-              {viewCount >= 1000 ? `${(viewCount / 1000).toFixed(0)}k` : viewCount}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-            <ShoppingCartOutlinedIcon sx={{ fontSize: 12, color: '#94a3b8' }} />
-            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: '0.7rem' }}>
-              {soldCount >= 1000 ? `${(soldCount / 1000).toFixed(1)}k` : soldCount}
-            </Typography>
-          </Box>
-          {rating !== undefined && rating > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, ml: 'auto' }}>
-              <StarRoundedIcon sx={{ fontSize: 13, color: '#f59e0b' }} />
-              <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#78716c' }}>
-                {rating.toFixed(1)}
+          {/* Price Section */}
+          <Box sx={{ mt: 'auto' }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+              <Typography sx={{ fontWeight: 800, color: '#0f172a', fontSize: '1.25rem' }}>
+                {formatPrice(price)}
+              </Typography>
+              <Typography sx={{ fontWeight: 600, color: '#94a3b8', fontSize: '0.75rem' }}>
+                VNĐ
               </Typography>
             </Box>
-          )}
-        </Box>
-
-        {/* Price */}
-        <Box sx={{ borderTop: '1px solid #f1f5f9', pt: 0.75 }}>
-          <Typography
-            component="div"
-            sx={{ fontWeight: 800, color: '#dc2626', fontSize: '0.95rem', lineHeight: 1.2 }}
-          >
-            {formatPrice(price)}
-            {priceMax && priceMax !== price && (
-              <Box component="span">
-                {' – '}{formatPrice(priceMax)}
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                <StarRoundedIcon sx={{ fontSize: 14, color: '#f59e0b' }} />
+                <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>{rating || 5.0}</Typography>
               </Box>
-            )}
-            <Box component="span" sx={{ fontSize: '0.72rem', fontWeight: 600, ml: 0.25 }}>
-              VNĐ
+              <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500 }}>
+                Đã bán {soldCount}
+              </Typography>
             </Box>
-          </Typography>
-        </Box>
-      </CardContent>
+          </Box>
+
+          {/* Buy Button */}
+          <Box
+            className="buy-button"
+            sx={{
+              bgcolor: '#4cc752',
+              color: 'white',
+              textAlign: 'center',
+              py: 1.2,
+              borderRadius: '8px',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              transition: 'background-color 0.2s ease',
+              mt: 1,
+            }}
+          >
+            Mua ngay
+          </Box>
+        </CardContent>
+      </Link>
     </Card>
   );
 }

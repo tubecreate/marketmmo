@@ -219,7 +219,10 @@ export default function SellerDisputesPage() {
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
                       <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>
-                        Tổng {d.order.amount.toLocaleString('vi-VN')}đ
+                        Khiếu nại {((d.order.amount / d.order.quantity) * d.faultyCount).toLocaleString('vi-VN')}đ
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        (Gốc: {d.order.amount.toLocaleString('vi-VN')}đ)
                       </Typography>
                       {d.status === 'OPEN' && (
                         <Button variant="contained" size="small" color="warning"
@@ -266,8 +269,10 @@ export default function SellerDisputesPage() {
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>{resolveDispute.faultyCount} lỗi</Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="overline" sx={{ fontWeight: 700, color: '#64748b', fontSize: '0.65rem' }}>TỔNG TIỀN</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>{resolveDispute.order.amount.toLocaleString('vi-VN')}đ</Typography>
+                    <Typography variant="overline" sx={{ fontWeight: 700, color: '#64748b', fontSize: '0.65rem' }}>GIÁ TRỊ KHIẾU NẠI</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>
+                      {((resolveDispute.order.amount / resolveDispute.order.quantity) * resolveDispute.faultyCount).toLocaleString('vi-VN')}đ
+                    </Typography>
                   </Box>
                 </Box>
               </Paper>

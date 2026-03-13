@@ -16,6 +16,12 @@ interface SystemConfig {
   commissionRate: number;
   minWithdrawAmount: number;
   maintenanceMode: boolean;
+  sepayApiKey?: string;
+  sepayMerchantId?: string;
+  sepayWebhookSecret?: string;
+  bankAccount?: string;
+  bankName?: string;
+  bankOwner?: string;
 }
 
 export default function AdminSettingsPage() {
@@ -137,6 +143,61 @@ export default function AdminSettingsPage() {
                       }
                     />
                   </Grid>
+
+                  <Grid size={{ xs: 12 }}>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#0f172a' }}>
+                      Cấu hình Nạp tiền & QR Code
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" mb={3}>
+                      Do API Gateway không tự động cung cấp thông tin tài khoản ngân hàng, bạn cần nhập thông tin bằng tay để hiển thị mã QR trên trang Nạp tiền.
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      fullWidth label="Tên Ngân Hàng (VD: Vietcombank)"
+                      value={config.bankName || ''}
+                      onChange={(e) => handleChange('bankName', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      fullWidth label="Số Tài Khoản"
+                      value={config.bankAccount || ''}
+                      onChange={(e) => handleChange('bankAccount', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      fullWidth label="Tên Chủ Tài Khoản"
+                      value={config.bankOwner || ''}
+                      onChange={(e) => handleChange('bankOwner', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth label="SePay Merchant ID"
+                      value={config.sepayMerchantId || ''}
+                      onChange={(e) => handleChange('sepayMerchantId', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      helperText="VD: SP-LIVE-TQA292B6"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth label="SePay Webhook Secret" type="password"
+                      value={config.sepayWebhookSecret || ''}
+                      onChange={(e) => handleChange('sepayWebhookSecret', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      helperText="VD: spsk_live_oHFK..."
+                    />
+                  </Grid>
+
                   <Grid size={{ xs: 12 }}>
                     <Button
                       type="submit" variant="contained" disabled={saving}

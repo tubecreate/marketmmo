@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { SePayPgClient } from 'sepay-pg-node';
 
 export async function POST(req: Request) {
   try {
@@ -9,13 +10,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Số tiền nạp tối thiểu là 10.000đ' }, { status: 400 });
     }
 
-    // 1. Fetch system config for bank info (we might need to add bank info to system config too)
-    // For now, let's assume some default or fetch from SystemConfig if we added it there.
-    // User shared developer.sepay.vn docs which usually implies we use their gateway or instructions.
+    const config = await prisma.systemConfig.findUnique({ where: { id: 'default' } }) as any;
     
-    const config = await prisma.systemConfig.findUnique({ where: { id: 'default' } });
-    
-    // 2. Create a pending transaction
+    // Create a pending transaction
     const transaction = await prisma.transaction.create({
       data: {
         userId,
@@ -26,26 +23,51 @@ export async function POST(req: Request) {
       }
     });
 
-    // 3. Generate a unique payment code: MKT + Transaction ID (shortened)
     const paymentCode = `MKT${transaction.id.slice(-6).toUpperCase()}`;
     
-    // Update the transaction with the actual payment code in description
     await prisma.transaction.update({
       where: { id: transaction.id },
       data: { description: paymentCode }
     });
 
-    // 4. Return instructions
-    // Note: In a real app, bank account info should come from SystemConfig
+    // Initialize SePay SDK
+    // If key starts with spsk_test, use sandbox
+    const isTest = (config?.sepayWebhookSecret || '').startsWith('spsk_test');
+    
+    const client = new SePayPgClient({
+      env: isTest ? 'sandbox' : 'production',
+      merchant_id: config?.sepayMerchantId || '',
+      secret_key: config?.sepayWebhookSecret || '',
+    });
+
+    // Generate checkout fields for hosted payment page
+    const fields = client.checkout.initOneTimePaymentFields({
+      operation: 'PURCHASE',
+      payment_method: 'BANK_TRANSFER',
+      order_invoice_number: paymentCode,
+      order_amount: parseFloat(amount),
+      currency: 'VND',
+      order_description: `Nap tien cho tai khoan ID: ${userId}`,
+      success_url: `${req.headers.get('origin')}/tai-khoan/nap-tien?status=success`,
+      cancel_url: `${req.headers.get('origin')}/tai-khoan/nap-tien?status=cancel`,
+    } as any);
+
+    // Generate official SePay QR URL
+    // Format: https://qr.sepay.vn/img?bank={BANK_NAME}&acc={ACCOUNT_NUMBER}&amount={AMOUNT}&des={DESCRIPTION}
+    const sepayQrUrl = `https://qr.sepay.vn/img?bank=${config?.bankName || ''}&acc=${config?.bankAccount || ''}&amount=${amount}&des=${paymentCode}`;
+
     return NextResponse.json({
       success: true,
       transactionId: transaction.id,
       paymentCode,
       amount: parseFloat(amount),
+      checkoutUrl: client.checkout.initCheckoutUrl(),
+      checkoutFields: fields,
+      qrUrl: sepayQrUrl,
       bankInfo: {
-        bankName: 'MB Bank', // Example, should be configurable
-        accountNumber: '123456789', // Example
-        accountHolder: 'NGUYEN VAN A', // Example
+        bankName: config?.bankName || '',
+        accountNumber: config?.bankAccount || '',
+        accountHolder: config?.bankOwner || '',
       }
     });
 

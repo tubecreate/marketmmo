@@ -20,6 +20,8 @@ interface AdminDispute {
     product: { title: string };
     buyer: { username: string };
     seller: { username: string };
+    amount: number;
+    quantity: number;
   };
 }
 
@@ -101,10 +103,16 @@ export default function AdminDisputesPage() {
                           @{d.order.seller.username}
                         </Typography>
                       </Grid>
-                      <Grid size={{ xs: 12, md: 4 }}>
+                      <Grid size={{ xs: 12, md: 3 }}>
                         <Typography variant="caption" color="text.secondary" fontWeight={700}>Item lỗi báo cáo</Typography>
                         <Typography variant="body2" fontWeight={800} color="error" sx={{ mt: 0.5 }}>
                           {d.faultyCount} lỗi
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 3 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>Giá trị tranh chấp</Typography>
+                        <Typography variant="body2" fontWeight={800} color="error" sx={{ mt: 0.5 }}>
+                          {((d.order.amount / d.order.quantity) * d.faultyCount).toLocaleString('vi-VN')}đ
                         </Typography>
                       </Grid>
                     </Grid>

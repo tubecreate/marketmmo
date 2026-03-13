@@ -16,6 +16,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import ChatIcon from '@mui/icons-material/Chat';
 import SyncIcon from '@mui/icons-material/Sync';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import LoginIcon from '@mui/icons-material/Login';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -211,6 +212,28 @@ export default function ProductDetailPage() {
                   sx={{ bgcolor: 'transparent', color: '#16a34a', fontWeight: 700, '& .MuiChip-label': { px: 0.5 } }}
                 />
                 <Typography variant="caption" color="text.secondary">• {(product.seller as Record<string, boolean>)?.isActive ? 'Online ngay lúc này' : 'Offline'}</Typography>
+                <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto', display: { xs: 'none', sm: 'block' } }} />
+                <Button
+                  component={Link}
+                  href={`/shop/${(product.seller as Record<string, string>)?.username}`}
+                  size="small"
+                  variant="outlined"
+                  startIcon={<StorefrontIcon sx={{ fontSize: '16px !important' }} />}
+                  sx={{ 
+                    borderRadius: '8px',
+                    borderColor: '#ff4d4f',
+                    color: '#ff4d4f',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 1.5,
+                    '&:hover': {
+                      borderColor: '#ff7875',
+                      bgcolor: 'rgba(255, 77, 79, 0.04)'
+                    }
+                  }}
+                >
+                  Xem Shop
+                </Button>
               </Box>
 
               <Divider sx={{ mb: 3, borderStyle: 'dashed' }} />
