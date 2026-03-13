@@ -40,9 +40,16 @@ export default function QuickChatDialog({ open, onClose, targetUser }: QuickChat
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Dragging state
-  const [position, setPosition] = useState({ x: window.innerWidth - 420, y: window.innerHeight - 520 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+
+  // Handle SSR/Initial Position
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPosition({ x: window.innerWidth - 420, y: window.innerHeight - 520 });
+    }
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
