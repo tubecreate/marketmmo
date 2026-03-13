@@ -37,6 +37,7 @@ interface ProductData {
   thumbnail: string | null;
   soldCount: number;
   viewCount: number;
+  status: string;
 }
 
 export default function ShopDetailPage() {
@@ -351,6 +352,7 @@ export default function ShopDetailPage() {
                     thumbnail={p.thumbnail ?? undefined}
                     soldCount={p.soldCount}
                     viewCount={p.viewCount}
+                    status={p.status}
                     seller={{
                       username: seller.username,
                       isOnline: seller.isActive

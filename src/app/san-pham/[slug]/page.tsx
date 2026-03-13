@@ -154,11 +154,28 @@ export default function ProductDetailPage() {
                   </Box>
                 )}
                 <IconButton onClick={() => setIsFavorite(!isFavorite)}
-                  sx={{ position: 'absolute', top: 12, right: 12, bgcolor: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: 'white' } }}
+                  sx={{ position: 'absolute', top: 12, right: 12, bgcolor: 'rgba(255,255,255,0.9)', zIndex: 3, '&:hover': { bgcolor: 'white' } }}
                 >
                   {isFavorite ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon sx={{ color: '#64748b' }} />}
                 </IconButton>
               </Box>
+              {product.status === 'CLOSED' && (
+                <Box sx={{ 
+                  position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.4)', 
+                  zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  <Typography sx={{ 
+                    bgcolor: '#ef4444', color: 'white', px: 3, py: 1.5, 
+                    borderRadius: 2, fontWeight: 900, fontSize: '1.2rem',
+                    boxShadow: '0 8px 16px rgba(239, 68, 68, 0.5)',
+                    transform: 'rotate(-5deg)',
+                    border: '2px solid white'
+                  }}>
+                    GIAN HÀNG TẠM ĐÓNG
+                  </Typography>
+                </Box>
+              )}
             </Box>
 
             <Button fullWidth variant="outlined" startIcon={isFavorite ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
@@ -306,6 +323,11 @@ export default function ProductDetailPage() {
               </Box>
 
               {/* Buy CTA */}
+              {product.status === 'CLOSED' && (
+                <Alert severity="error" icon={<WarningAmberIcon />} sx={{ mb: 2, borderRadius: 1, fontWeight: 700 }}>
+                  Gian hàng hiện đang đóng cửa tạm thời. Vui lòng quay lại sau!
+                </Alert>
+              )}
               {buyError && (
                 <Alert severity="error" sx={{ mb: 2, borderRadius: 1, fontSize: '0.85rem' }}>
                   {buyError}
@@ -337,11 +359,11 @@ export default function ProductDetailPage() {
               ) : (
                 <Button
                   fullWidth variant="contained" size="large" onClick={handleBuy}
-                  disabled={buying || product.status !== 'ACTIVE' || selectedStock === 0}
+                  disabled={buying || product.status === 'CLOSED' || selectedStock === 0}
                   startIcon={buying ? <CircularProgress size={20} color="inherit" /> : <ShoppingCartIcon />}
                   sx={{ bgcolor: '#eab308', color: '#854d0e', fontWeight: 800, fontSize: '1.1rem', py: 1.5, borderRadius: 1, '&:hover': { bgcolor: '#ca8a04' } }}
                 >
-                  {selectedStock === 0 ? 'HẾT HÀNG' : buying ? 'ĐANG XỬ LÝ...' : 'MUA NGAY'}
+                  {product.status === 'CLOSED' ? 'TẠM NGƯNG' : selectedStock === 0 ? 'HẾT HÀNG' : buying ? 'ĐANG XỬ LÝ...' : 'MUA NGAY'}
                 </Button>
               )}
             </Paper>

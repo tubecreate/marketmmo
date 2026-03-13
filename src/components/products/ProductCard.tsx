@@ -31,6 +31,7 @@ export interface ProductCardProps {
   rating?: number;
   isSponsored?: boolean;
   shortDescription?: string;
+  status?: string;
 }
 
 function formatPrice(price: number): string {
@@ -68,7 +69,7 @@ function getCategoryBgColor(categoryLabel?: string): string {
 
 export default function ProductCard({
   title, slug, price, thumbnail, type, categoryLabel,
-  soldCount, rating, isSponsored, shortDescription,
+  soldCount, rating, isSponsored, shortDescription, status,
 }: ProductCardProps) {
   const isDigital = type === 'DIGITAL';
   const emoji = getCategoryEmoji(categoryLabel);
@@ -148,6 +149,24 @@ export default function ProductCard({
               <BoltIcon sx={{ fontSize: 10 }} /> GIAO NHANH
             </Box>
           </Box>
+
+          {/* Closed Overlay */}
+          {status === 'CLOSED' && (
+            <Box sx={{ 
+              position: 'absolute', inset: 0, bgcolor: 'rgba(255,255,255,0.7)', 
+              zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(2px)'
+            }}>
+              <Typography sx={{ 
+                bgcolor: '#ef4444', color: 'white', px: 2, py: 0.6, 
+                borderRadius: 1, fontWeight: 900, fontSize: '0.9rem',
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+                transform: 'rotate(-5deg)'
+              }}>
+                ĐÃ ĐÓNG
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Content */}
@@ -218,7 +237,7 @@ export default function ProductCard({
           <Box
             className="buy-button"
             sx={{
-              bgcolor: '#4cc752',
+              bgcolor: status === 'CLOSED' ? '#94a3b8' : '#4cc752',
               color: 'white',
               textAlign: 'center',
               py: 1.2,
@@ -229,7 +248,7 @@ export default function ProductCard({
               mt: 1,
             }}
           >
-            Mua ngay
+            {status === 'CLOSED' ? 'Tạm ngưng' : 'Mua ngay'}
           </Box>
         </CardContent>
       </Link>

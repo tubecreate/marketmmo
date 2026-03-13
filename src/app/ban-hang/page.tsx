@@ -8,10 +8,10 @@ import {
   Button, Chip, Skeleton, Tooltip, TextField, InputAdornment,
 } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
+import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 
@@ -92,10 +92,17 @@ export default function SellerProductsPage() {
     setFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn xóa gian hàng này?')) return;
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const isClosed = currentStatus === 'CLOSED';
+    const action = isClosed ? 'MỞ LẠI' : 'ĐÓNG';
+    if (!window.confirm(`Bạn có chắc muốn ${action} gian hàng này?`)) return;
+    
     try {
-      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/products/${id}`, { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: isClosed ? 'ACTIVE' : 'CLOSED' })
+      });
       if (res.ok) fetchData();
     } catch (err) {
       console.error(err);
@@ -236,18 +243,18 @@ export default function SellerProductsPage() {
                               <EditIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Xóa gian hàng">
+                          <Tooltip title={p.status === 'CLOSED' ? "Mở lại gian hàng" : "Đóng gian hàng"}>
                             <IconButton 
                               size="small" 
-                              onClick={() => handleDelete(p.id)}
+                              onClick={() => handleToggleStatus(p.id, p.status)}
                               sx={{ 
                                 ml: 1,
                                 border: '1px solid #e2e8f0', 
-                                color: '#94a3b8',
-                                '&:hover': { color: '#ef4444', bgcolor: '#fef2f2', borderColor: '#fecaca' }
+                                color: p.status === 'CLOSED' ? '#16a34a' : '#94a3b8',
+                                '&:hover': { color: p.status === 'CLOSED' ? '#15803d' : '#ef4444', bgcolor: p.status === 'CLOSED' ? '#f0fdf4' : '#fef2f2', borderColor: p.status === 'CLOSED' ? '#bbf7d0' : '#fecaca' }
                               }}
                             >
-                              <DeleteIcon sx={{ fontSize: 16 }} />
+                              <PowerSettingsNewIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
                       </TableCell>
@@ -279,14 +286,14 @@ export default function SellerProductsPage() {
                       </TableCell>
                       <TableCell>
                         <Chip 
-                          label={p.status === 'ACTIVE' ? 'ĐANG BÁN' : 'CHỜ DUYỆT'} 
+                          label={p.status === 'ACTIVE' ? 'ĐANG BÁN' : p.status === 'PENDING' ? 'CHỜ DUYỆT' : p.status === 'CLOSED' ? 'ĐÃ ĐÓNG' : p.status} 
                           size="small" 
                           sx={{ 
                             fontWeight: 800, fontSize: '0.65rem', borderRadius: 1.5,
-                            bgcolor: p.status === 'ACTIVE' ? '#dcfce7' : '#fffbeb',
-                            color: p.status === 'ACTIVE' ? '#166534' : '#854d0e',
+                            bgcolor: p.status === 'ACTIVE' ? '#dcfce7' : p.status === 'CLOSED' ? '#fee2e2' : '#fffbeb',
+                            color: p.status === 'ACTIVE' ? '#166534' : p.status === 'CLOSED' ? '#991b1b' : '#854d0e',
                             border: '1px solid',
-                            borderColor: p.status === 'ACTIVE' ? '#bbf7d0' : '#fde68a'
+                            borderColor: p.status === 'ACTIVE' ? '#bbf7d0' : p.status === 'CLOSED' ? '#fecaca' : '#fde68a'
                           }}
                         />
                       </TableCell>

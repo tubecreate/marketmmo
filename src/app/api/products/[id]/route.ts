@@ -40,6 +40,20 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     // Check if requester is ADMIN
     const isAdmin = data.role === 'ADMIN';
+    
+    // For normal sellers, only allow changing to 'ACTIVE' or 'CLOSED' 
+    // AND only if the current status isn't PENDING/REJECTED (or allow them to close pending?)
+    // Let's keep it simple: if not admin, we only allow certain status transitions.
+    
+    let nextStatus = data.status;
+    if (!isAdmin) {
+      if (data.status === 'CLOSED' || data.status === 'ACTIVE') {
+        nextStatus = data.status;
+      } else {
+        delete data.status;
+        nextStatus = undefined;
+      }
+    }
 
     const updated = await prisma.product.update({
       where: { id },
@@ -49,36 +63,34 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         description: data.description,
         price: data.price ? parseFloat(data.price) : undefined,
         priceMax: data.priceMax ? parseFloat(data.priceMax) : undefined,
-        status: isAdmin ? data.status : 'PENDING',
+        status: nextStatus,
         categoryId: data.categoryId,
         thumbnail: data.thumbnail,
       }
     });
 
-    if (data.status === 'ACTIVE') {
+    if (data.status === 'ACTIVE' && isAdmin) {
       await sendSystemMessage(updated.sellerId, `✅ Tuyệt vời! Gian hàng "${updated.title}" của bạn đã được duyệt và đang hiển thị trên sàn.`);
-    } else if (data.status === 'REJECTED') {
+    } else if (data.status === 'REJECTED' && isAdmin) {
       await sendSystemMessage(updated.sellerId, `❌ Rất tiếc, gian hàng "${updated.title}" của bạn đã bị từ chối duyệt. Vui lòng kiểm tra lại thông tin.`);
     }
 
     return NextResponse.json({ success: true, product: updated });
-  } catch {
-    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Update failed' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   try {
-    const orderCount = await prisma.order.count({ where: { productId: id } });
-    if (orderCount > 0) {
-      await prisma.product.update({ where: { id }, data: { status: 'DELETED' } });
-      return NextResponse.json({ success: true, message: 'Status set to deleted due to existing orders' });
-    }
-
-    await prisma.product.delete({ where: { id } });
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
+    // We now soft-close instead of physical deletion as per user request
+    await prisma.product.update({ 
+      where: { id }, 
+      data: { status: 'CLOSED' } 
+    });
+    return NextResponse.json({ success: true, message: 'Booth closed successfully' });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Close failed' }, { status: 500 });
   }
 }

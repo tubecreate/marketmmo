@@ -25,7 +25,7 @@ export async function GET(
         _count: {
           select: {
             sellerOrders: true,
-            products: { where: { status: 'ACTIVE' } }
+            products: { where: { status: { in: ['ACTIVE', 'CLOSED'] } } }
           }
         }
       }
@@ -38,7 +38,7 @@ export async function GET(
     const products = await prisma.product.findMany({
       where: {
         sellerId: user.id,
-        status: 'ACTIVE'
+        status: { in: ['ACTIVE', 'CLOSED'] }
       },
       include: {
         category: { select: { name: true, slug: true } },
