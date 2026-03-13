@@ -19,6 +19,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useAuth } from '@/context/AuthContext';
 import ConfirmModal from '@/components/common/ConfirmModal';
+import QuickChatDialog from '@/components/chat/QuickChatDialog';
 
 
 const statusMap: Record<string, { label: string; color: string; bg: string }> = {
@@ -74,6 +75,16 @@ export default function OrdersPage() {
   const [disputeFaultyCount, setDisputeFaultyCount] = useState(1);
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  // Quick Chat State
+  const [chatOpen, setChatOpen] = useState(false);
+  const [targetChatUser, setTargetChatUser] = useState<{ id: string; username: string; avatar?: string | null } | null>(null);
+
+  const handleOpenChat = (seller: any) => {
+    if (!seller?.id) return;
+    setTargetChatUser({ id: seller.id, username: seller.username, avatar: null });
+    setChatOpen(true);
+  };
 
   // Global Confirm State
   const [confirmState, setConfirmState] = useState<{
@@ -299,8 +310,7 @@ export default function OrdersPage() {
                           onClick={(e: React.MouseEvent) => { 
                             e.stopPropagation(); 
                             if (order.seller?.id) {
-                              const text = encodeURIComponent(order.product?.title || 'đơn hàng');
-                              window.location.href = `/user_chat?userId=${order.seller.id}&orderId=${order.id}&title=${text}`;
+                              handleOpenChat(order.seller);
                             }
                           }} 
                           sx={{ color: order.seller?.id ? '#2563eb' : 'inherit', cursor: order.seller?.id ? 'pointer' : 'default', textDecoration: order.seller?.id ? 'underline' : 'none', fontWeight: 600 }}
@@ -498,6 +508,13 @@ export default function OrdersPage() {
         message={confirmState.message}
         variant={confirmState.variant}
         loading={confirmingId !== null || cancellingId !== null}
+      />
+
+      {/* Quick Chat Dialog */}
+      <QuickChatDialog 
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        targetUser={targetChatUser}
       />
     </SiteLayout>
   );

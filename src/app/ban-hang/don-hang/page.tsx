@@ -17,7 +17,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SellerLayout from '@/components/layout/SellerLayout';
 import { useAuth } from '@/context/AuthContext';
-// import { useRouter } from 'next/navigation'; // Removed unused router
+import QuickChatDialog from '@/components/chat/QuickChatDialog';
 
 const STATUS_TABS = [
   { label: 'Tất cả', value: 'all' },
@@ -36,6 +36,16 @@ export default function SellerOrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  
+  // Quick Chat State
+  const [chatOpen, setChatOpen] = useState(false);
+  const [targetChatUser, setTargetChatUser] = useState<{ id: string; username: string; avatar?: string | null } | null>(null);
+
+  const handleOpenChat = (buyer: any) => {
+    if (!buyer?.id) return;
+    setTargetChatUser({ id: buyer.id, username: buyer.username, avatar: buyer.avatar });
+    setChatOpen(true);
+  };
 
   const handleOpenDetail = (order: any) => {
     setSelectedOrder(order);
@@ -179,7 +189,7 @@ export default function SellerOrdersPage() {
                             size="small" 
                             color="primary" 
                             sx={{ p: 0.2 }}
-                            onClick={() => window.location.href = `/user_chat?userId=${order.buyer?.id}`}
+                            onClick={() => handleOpenChat(order.buyer)}
                             disabled={!order.buyer?.id}
                           >
                             <ChatBubbleOutlineIcon sx={{ fontSize: 16 }} />
@@ -200,11 +210,22 @@ export default function SellerOrdersPage() {
                           {new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                         </Typography>
                       </TableCell>
-                      <TableCell 
-                        onClick={() => { if (order.buyer?.id) window.location.href = `/user_chat?userId=${order.buyer?.id}`; }}
-                        sx={{ cursor: order.buyer?.id ? 'pointer' : 'default', '&:hover': { bgcolor: order.buyer?.id ? alpha('#2563eb', 0.05) : 'transparent' } }}
-                      >
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', color: order.buyer?.id ? '#2563eb' : '#334155', textDecoration: order.buyer?.id ? 'underline' : 'none', fontWeight: order.buyer?.id ? 600 : 400 }}>{order.buyer?.username}</Typography>
+                      <TableCell>
+                        <Typography 
+                          variant="body2" 
+                          onClick={() => handleOpenChat(order.buyer)}
+                          sx={{ 
+                            fontSize: '0.75rem', 
+                            color: order.buyer?.id ? '#2563eb' : '#334155', 
+                            textDecoration: order.buyer?.id ? 'underline' : 'none', 
+                            fontWeight: order.buyer?.id ? 600 : 400,
+                            cursor: order.buyer?.id ? 'pointer' : 'default',
+                            p: 0.5, borderRadius: 1,
+                            '&:hover': { bgcolor: order.buyer?.id ? alpha('#2563eb', 0.05) : 'transparent' }
+                          }}
+                        >
+                          {order.buyer?.username}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontSize: '0.75rem', color: '#2563eb', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -356,6 +377,13 @@ export default function SellerOrdersPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Quick Chat Dialog */}
+      <QuickChatDialog 
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        targetUser={targetChatUser}
+      />
     </SellerLayout>
   );
 }
