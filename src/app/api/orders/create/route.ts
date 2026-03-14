@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/orders/create
 // Body: { buyerId, productId, variantId?, quantity }
@@ -27,8 +28,8 @@ export async function POST(req: Request) {
     if (buyer.id === product.sellerId) return NextResponse.json({ error: 'Không thể mua hàng từ gian hàng của chính mình' }, { status: 400 });
 
     // Check if it's a SERVICE item
-    if (product.isService) {
-      if (product.allowBidding) {
+    if ((product as any).isService) {
+      if ((product as any).allowBidding) {
         // ── SERVICE BIDDING FLOW ──
         // No upfront charge. Order goes to NEGOTIATING.
         const order = await prisma.order.create({
@@ -57,6 +58,14 @@ export async function POST(req: Request) {
           buyerId,
           `📝 Tạo đơn yêu cầu thành công!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nVui lòng chờ người bán phản hồi báo giá.`
         );
+
+        await createNotification({
+          userId: product.sellerId,
+          title: 'Yêu cầu báo giá mới',
+          content: `Khách hàng đã gửi yêu cầu báo giá cho dịch vụ "${variant?.name || 'Kho chung'}".`,
+          type: 'ORDER_UPDATE',
+          targetUrl: '/ban-hang/dich-vu'
+        });
 
         return NextResponse.json({
           success: true,
@@ -113,6 +122,14 @@ export async function POST(req: Request) {
           product.sellerId,
           `💼 Có đơn đặt hàng dịch vụ mới!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nKhách đã thanh toán: ${totalAmount.toLocaleString('vi-VN')}đ (Đang tạm giữ).\nVui lòng vào chi tiết đơn và ấn BẮT ĐẦU LÀM.`
         );
+
+        await createNotification({
+          userId: product.sellerId,
+          title: 'Đơn dịch vụ mới',
+          content: `Bạn có đơn hàng dịch vụ mới cho "${variant?.name || 'Kho chung'}".`,
+          type: 'ORDER_UPDATE',
+          targetUrl: '/ban-hang/dich-vu'
+        });
 
         return NextResponse.json({
           success: true,
@@ -200,6 +217,14 @@ export async function POST(req: Request) {
           buyerId,
           `⏳ Bạn đã đặt trước thành công!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nSố lượng: ${quantity}\nSố tiền: -${totalAmount.toLocaleString('vi-VN')}đ\nHàng sẽ được giao tự động khi người bán nhập kho. Bạn có thể huỷ bất kỳ lúc nào.`
         );
+
+        await createNotification({
+          userId: product.sellerId,
+          title: 'Đơn đặt trước mới',
+          content: `Bạn có đơn đặt trước mới cho "${variant?.name || 'Kho chung'}".`,
+          type: 'ORDER_UPDATE',
+          targetUrl: '/ban-hang/dat-truoc'
+        });
       } catch (e) {
         console.error('Failed to notify users via chat', e);
       }
@@ -278,6 +303,14 @@ export async function POST(req: Request) {
         buyerId,
         `✅ Bạn đã mua hàng thành công!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nSố lượng: ${quantity}\nSố tiền: -${totalAmount.toLocaleString('vi-VN')}đ\nVui lòng kiểm tra chi tiết trong trang Quản lý đơn hàng.`
       );
+
+      await createNotification({
+        userId: product.sellerId,
+        title: 'Đơn hàng mới',
+        content: `Bạn có đơn hàng mới cho "${variant?.name || 'Kho chung'}". Số lượng: ${quantity}.`,
+        type: 'ORDER_UPDATE',
+        targetUrl: '/ban-hang/don-hang'
+      });
     } catch (e) {
       console.error('Failed to notify users via chat', e);
     }

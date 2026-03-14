@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/orders/[id]/deliver
 // Body: { sellerId, content }
@@ -37,6 +38,14 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       order.buyerId,
       `🎁 Đơn hàng #${order.id.slice(-8).toUpperCase()} ĐÃ ĐƯỢC BÀN GIAO!\nVui lòng vào chi tiết đơn hàng để xem nội dung và xác nhận hoàn thành để giải ngân cho người bán.`
     );
+
+    await createNotification({
+      userId: order.buyerId,
+      title: 'Đơn hàng đã bàn giao',
+      content: `Người bán đã bàn giao nội dung cho đơn hàng #${order.id.slice(-8).toUpperCase()}.`,
+      type: 'ORDER_UPDATE',
+      targetUrl: '/tai-khoan/don-hang'
+    });
 
     return NextResponse.json({ success: true, order: updatedOrder });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/orders/[id]/confirm
 // Body: { buyerId }
@@ -49,6 +50,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
       }),
     ]);
+
+    await createNotification({
+      userId: order.sellerId,
+      title: 'Đơn hàng hoàn thành',
+      content: `Người mua đã xác nhận hoàn thành đơn hàng #${order.id.slice(-8).toUpperCase()}.`,
+      type: 'ORDER_UPDATE',
+      targetUrl: '/ban-hang/dashboard'
+    });
 
     return NextResponse.json({ success: true, message: 'Xác nhận đơn hàng thành công' });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/orders/[id]/accept-bid
 // Body: { buyerId }
@@ -54,6 +55,14 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       order.sellerId,
       `✅ Khách hàng đã chấp nhận báo giá và thanh toán cho đơn #${order.id.slice(-8).toUpperCase()} (${totalAmount.toLocaleString('vi-VN')}đ).\nVui lòng vào chi tiết đơn hàng và ấn BẮT ĐẦU LÀM.`
     );
+
+    await createNotification({
+      userId: order.sellerId,
+      title: 'Khách chấp nhận báo giá',
+      content: `Người mua đã duyệt báo giá và thanh toán cho đơn #${order.id.slice(-8).toUpperCase()}.`,
+      type: 'ORDER_UPDATE',
+      targetUrl: '/ban-hang/dich-vu'
+    });
 
     return NextResponse.json({ success: true, order: updatedOrder });
   } catch (error) {

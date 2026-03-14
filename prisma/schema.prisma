@@ -31,8 +31,9 @@ model User {
   chatLogs         ChatLog[]
   chatRooms        ChatParticipant[]
   coupons          Coupon[]
-  sellerOrders     Order[]           @relation("SellerOrders")
+  notifications    Notification[]
   buyerOrders      Order[]           @relation("BuyerOrders")
+  sellerOrders     Order[]           @relation("SellerOrders")
   products         Product[]
   sellerRequest    SellerRequest?
   transactions     Transaction[]
@@ -68,54 +69,51 @@ model Category {
 }
 
 model Product {
-  id           String           @id @default(cuid())
-  sellerId     String
-  categoryId   String?
-  title        String
-  slug         String           @unique
-  shortDescription String?
-  description  String
-  type         String
-  price        Float
-  priceMax     Float?
-  thumbnail    String?
-  status       String           @default("PENDING")
-  isFeatured   Boolean          @default(false)
-  isSponsored  Boolean          @default(false)
-  viewCount    Int              @default(0)
-  soldCount    Int              @default(0)
-  rating       Float            @default(0)
-  warrantyDays Int              @default(3)
-  lastSoldAt   DateTime?
-  
-  // Dịch vụ / Service items
-  isService         Boolean     @default(false)
-  allowBidding      Boolean     @default(false) // Báo giá theo yêu cầu
-  deliveryTimeHours Int?        // Thời gian hoàn thành cam kết (giờ)
-
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  orders       Order[]
-  category     Category?        @relation(fields: [categoryId], references: [id])
-  seller       User             @relation(fields: [sellerId], references: [id])
-  items        ProductItem[]
-  variants     ProductVariant[]
-  reviews      Review[]
+  id                String           @id @default(cuid())
+  sellerId          String
+  categoryId        String?
+  title             String
+  slug              String           @unique
+  shortDescription  String?
+  description       String
+  type              String
+  price             Float
+  priceMax          Float?
+  thumbnail         String?
+  status            String           @default("PENDING")
+  isFeatured        Boolean          @default(false)
+  isSponsored       Boolean          @default(false)
+  viewCount         Int              @default(0)
+  soldCount         Int              @default(0)
+  rating            Float            @default(0)
+  warrantyDays      Int              @default(3)
+  lastSoldAt        DateTime?
+  isService         Boolean          @default(false)
+  allowBidding      Boolean          @default(false)
+  deliveryTimeHours Int?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  orders            Order[]
+  seller            User             @relation(fields: [sellerId], references: [id])
+  category          Category?        @relation(fields: [categoryId], references: [id])
+  items             ProductItem[]
+  variants          ProductVariant[]
+  reviews           Review[]
 }
 
 model ProductVariant {
-  id            String        @id @default(cuid())
-  productId     String
-  name          String
-  price         Float
-  allowBidding  Boolean      @default(false)
-  deliveryTimeHours Int?      // Thời gian thực hiện (giờ) cho sản phẩm này
-  description   String?
-  sortOrder     Int           @default(0)
-  createdAt     DateTime      @default(now())
-  items         ProductItem[]
-  product       Product       @relation(fields: [productId], references: [id])
-  orders        Order[]
+  id                String        @id @default(cuid())
+  productId         String
+  name              String
+  price             Float
+  allowBidding      Boolean       @default(false)
+  description       String?
+  sortOrder         Int           @default(0)
+  createdAt         DateTime      @default(now())
+  deliveryTimeHours Int?
+  orders            Order[]
+  items             ProductItem[]
+  product           Product       @relation(fields: [productId], references: [id])
 }
 
 model ProductItem {
@@ -131,37 +129,34 @@ model ProductItem {
 }
 
 model Order {
-  id               String    @id @default(cuid())
-  buyerId          String
-  sellerId         String
-  productId        String
-  variantId        String?
-  variantName      String?
-  quantity         Int       @default(1)
-  amount           Float
-  fee              Float     @default(0)
-  status           String    @default("PENDING")
-  deliveredContent String?
-  warrantyExpire   DateTime?
-  couponCode       String?
-  discountAmount   Float     @default(0)
-  
-  // Các field cho luồng dịch vụ
-  customPrice      Float?    // Giá chốt sau ghi mặc cả (allowBidding)
-  negotiatedDeliveryHours Int? // Thời gian thực hiện đã chốt sau thương lượng
-  startedAt        DateTime? // Bắt đầu tính thời gian làm (Sellers Accept)
-  deliveredAt      DateTime? // Đã báo cáo giao sản phẩm / nội dung
-  buyerConfirmedAt DateTime? // Khách ấn hoàn thành
-  pendingExtensionHours Int?    // Yêu cầu gia hạn thêm bao nhiêu giờ
-
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  dispute          Dispute?
-  product          Product   @relation(fields: [productId], references: [id])
-  variant          ProductVariant? @relation(fields: [variantId], references: [id])
-  seller           User      @relation("SellerOrders", fields: [sellerId], references: [id])
-  buyer            User      @relation("BuyerOrders", fields: [buyerId], references: [id])
-  review           Review?
+  id                      String          @id @default(cuid())
+  buyerId                 String
+  sellerId                String
+  productId               String
+  variantId               String?
+  variantName             String?
+  quantity                Int             @default(1)
+  amount                  Float
+  fee                     Float           @default(0)
+  status                  String          @default("PENDING")
+  deliveredContent        String?
+  warrantyExpire          DateTime?
+  couponCode              String?
+  discountAmount          Float           @default(0)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  buyerConfirmedAt        DateTime?
+  customPrice             Float?
+  deliveredAt             DateTime?
+  startedAt               DateTime?
+  negotiatedDeliveryHours Int?
+  pendingExtensionHours   Int?
+  dispute                 Dispute?
+  buyer                   User            @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller                  User            @relation("SellerOrders", fields: [sellerId], references: [id])
+  variant                 ProductVariant? @relation(fields: [variantId], references: [id])
+  product                 Product         @relation(fields: [productId], references: [id])
+  review                  Review?
 }
 
 model Dispute {
@@ -204,16 +199,16 @@ model Transaction {
 }
 
 model Review {
-  id            String   @id @default(cuid())
-  orderId       String   @unique
+  id            String    @id @default(cuid())
+  orderId       String    @unique
   productId     String
   rating        Int
   comment       String?
+  createdAt     DateTime  @default(now())
   sellerReply   String?
   sellerReplyAt DateTime?
-  createdAt     DateTime @default(now())
-  product       Product  @relation(fields: [productId], references: [id])
-  order         Order    @relation(fields: [orderId], references: [id])
+  product       Product   @relation(fields: [productId], references: [id])
+  order         Order     @relation(fields: [orderId], references: [id])
 }
 
 model Coupon {
@@ -324,4 +319,16 @@ model ChatMessage {
   createdAt DateTime @default(now())
   isSystem  Boolean  @default(false)
   room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  type      String
+  targetUrl String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }

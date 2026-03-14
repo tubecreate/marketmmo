@@ -19,11 +19,19 @@ import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlin
 import LogoutIcon from '@mui/icons-material/Logout';
 
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import { useRouter } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 export default function Header() {
   const { user, logout, unreadCount } = useAuth();
+  const { notifications, unreadNotificationsCount, markAsRead } = useNotifications();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
 
   return (
     <AppBar
@@ -161,6 +169,105 @@ export default function Header() {
                   <LocalMallIcon sx={{ fontSize: 24 }} />
                   <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Đơn hàng</Typography>
                 </Box>
+
+                <Box
+                  onClick={(e) => setNotifAnchorEl(e.currentTarget)}
+                  sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#475569', transition: 'color 0.2s', '&:hover': { color: '#0f172a' } }}
+                >
+                  <Badge 
+                    badgeContent={unreadNotificationsCount} 
+                    color="error"
+                    sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: 16, minWidth: 16 } }}
+                  >
+                    <NotificationsIcon sx={{ fontSize: 24 }} />
+                  </Badge>
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem', mt: 0.3 }}>Thông báo</Typography>
+                </Box>
+
+                <Menu
+                  anchorEl={notifAnchorEl}
+                  open={Boolean(notifAnchorEl)}
+                  onClose={() => setNotifAnchorEl(null)}
+                  PaperProps={{
+                    elevation: 8,
+                    sx: {
+                      mt: 1.5,
+                      width: 360,
+                      maxWidth: '90vw',
+                      maxHeight: 480,
+                      borderRadius: 3,
+                      border: '1px solid #e2e8f0',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    },
+                  }}
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                >
+                  <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Thông báo</Typography>
+                    <Button 
+                      size="small" 
+                      onClick={() => markAsRead(undefined, true)}
+                      sx={{ textTransform: 'none', fontWeight: 600, color: '#16a34a' }}
+                    >
+                      Đánh dấu tất cả đã đọc
+                    </Button>
+                  </Box>
+                  <Box sx={{ overflowY: 'auto', flex: 1 }}>
+                    {notifications.length === 0 ? (
+                      <Box sx={{ p: 4, textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary">Không có thông báo mới nào</Typography>
+                      </Box>
+                    ) : (
+                      notifications.map((notif) => (
+                        <MenuItem
+                          key={notif.id}
+                          onClick={() => {
+                            markAsRead(notif.id);
+                            if (notif.targetUrl) router.push(notif.targetUrl);
+                            setNotifAnchorEl(null);
+                          }}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            whiteSpace: 'normal',
+                            borderBottom: '1px solid #f8fafc',
+                            bgcolor: notif.isRead ? 'transparent' : alpha('#16a34a', 0.04),
+                            display: 'flex',
+                            gap: 2,
+                            alignItems: 'flex-start',
+                            '&:hover': { bgcolor: alpha('#16a34a', 0.06) }
+                          }}
+                        >
+                          <Avatar sx={{ 
+                            width: 40, 
+                            height: 40, 
+                            bgcolor: notif.type === 'ORDER_UPDATE' ? '#f0fdf4' : '#eff6ff', 
+                            color: notif.type === 'ORDER_UPDATE' ? '#16a34a' : '#2563eb' 
+                          }}>
+                            <LocalMallIcon fontSize="small" />
+                          </Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: notif.isRead ? 600 : 800, fontSize: '0.85rem', mb: 0.5 }}>
+                              {notif.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', lineHeight: 1.4, mb: 0.5 }}>
+                              {notif.content}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>
+                              {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: vi })}
+                            </Typography>
+                          </Box>
+                          {!notif.isRead && (
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#16a34a', mt: 1 }} />
+                          )}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Box>
+                </Menu>
 
                 <Box
                   component={Link}

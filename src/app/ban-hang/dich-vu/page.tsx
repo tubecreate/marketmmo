@@ -416,10 +416,24 @@ export default function SellerServiceOrdersPage() {
                   <Typography variant="body2" sx={{ color: '#64748b' }}>Khách hàng: <strong>@{selectedOrder.buyer?.username}</strong></Typography>
                 </Box>
                 
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Thanh toán</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 900, color: '#16a34a' }}>{selectedOrder.amount.toLocaleString('vi-VN')}đ</Typography>
-                </Box>
+                <Stack direction="row" spacing={4} sx={{ mb: 3 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Thanh toán</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, color: '#16a34a' }}>
+                      {selectedOrder.amount > 0 
+                        ? `${selectedOrder.amount.toLocaleString('vi-VN')}đ` 
+                        : (selectedOrder.customPrice ? `${selectedOrder.customPrice.toLocaleString('vi-VN')}đ` : 'Chờ báo giá')}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Thời hạn hoàn thành</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, color: '#1e293b' }}>
+                      {selectedOrder.negotiatedDeliveryHours 
+                        ? `${selectedOrder.negotiatedDeliveryHours}h` 
+                        : `${selectedOrder.variant?.deliveryTimeHours || selectedOrder.product.deliveryTimeHours || 0}h`}
+                    </Typography>
+                  </Box>
+                </Stack>
 
                 {selectedOrder.status === 'DELIVERED' && (
                   <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>

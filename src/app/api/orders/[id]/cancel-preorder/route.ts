@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/orders/[id]/cancel-preorder
 // Body: { buyerId }
@@ -48,6 +49,14 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         order.sellerId,
         `❌ Đơn đặt trước #${orderId.slice(-8).toUpperCase()} đã bị người mua huỷ. Số tiền tạm giữ đã được trả lại.`
       );
+
+      await createNotification({
+        userId: order.sellerId,
+        title: 'Đơn đặt trước bị huỷ',
+        content: `Người mua đã huỷ đơn đặt trước #${orderId.slice(-8).toUpperCase()} và nhận lại tiền.`,
+        type: 'ORDER_UPDATE',
+        targetUrl: '/ban-hang/dat-truoc'
+      });
     } catch (e) {
       console.error('Failed to notify seller about pre-order cancellation', e);
     }

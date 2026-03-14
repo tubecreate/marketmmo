@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
+import { createNotification } from '@/lib/notifications';
 
 // POST /api/orders/[id]/extend
 // Body: { sellerId, hours }
@@ -37,6 +38,14 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       (updatedOrder as any).buyerId,
       `🕒 Người bán đã gửi yêu cầu gia hạn thêm ${hours} giờ thực hiện cho đơn hàng #${orderId.slice(-8).toUpperCase()} (${(order as any).product.title}). Vui lòng vào trang Đơn hàng để xác nhận.`
     );
+
+    await createNotification({
+      userId: (updatedOrder as any).buyerId,
+      title: 'Yêu cầu gia hạn đơn hàng',
+      content: `Người bán muốn gia hạn thêm ${hours} giờ cho đơn hàng #${orderId.slice(-8).toUpperCase()}.`,
+      type: 'ORDER_UPDATE',
+      targetUrl: '/tai-khoan/don-hang'
+    });
 
     return NextResponse.json({ success: true, pendingHours: hours });
   } catch (error) {

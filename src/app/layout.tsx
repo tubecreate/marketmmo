@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import ThemeRegistry from '@/components/ThemeRegistry';
 import { AuthProvider } from '@/context/AuthContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { Toaster } from 'sonner';
 import './globals.css';
 
@@ -27,8 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeRegistry>
           <AuthProvider>
-            {children}
-            <Toaster position="top-right" richColors closeButton />
+            <NotificationProvider>
+              {children}
+              <Toaster position="top-right" richColors closeButton />
+            </NotificationProvider>
           </AuthProvider>
         </ThemeRegistry>
       </body>
