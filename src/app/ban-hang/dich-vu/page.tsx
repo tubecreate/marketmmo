@@ -12,6 +12,7 @@ import HandymanIcon from '@mui/icons-material/Handyman';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ChatIcon from '@mui/icons-material/Chat';
+import UpdateIcon from '@mui/icons-material/Update';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import QuickChatDialog from '@/components/chat/QuickChatDialog';
@@ -129,6 +130,21 @@ export default function SellerServiceOrdersPage() {
   const [extendHours, setExtendHours] = useState('24');
   const [extendingOrder, setExtendingOrder] = useState<Order | null>(null);
   const [extendLoading, setExtendLoading] = useState(false);
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+
+  // Confirmation Dialog State
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    color?: 'primary' | 'secondary' | 'warning' | 'error' | 'success';
+  }>({ title: '', message: '', onConfirm: () => {} });
+
+  const handleOpenConfirm = (title: string, message: string, onConfirm: () => void, color: any = 'primary') => {
+    setConfirmConfig({ title, message, onConfirm, color });
+    setConfirmOpen(true);
+  };
 
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -145,17 +161,22 @@ export default function SellerServiceOrdersPage() {
       // EXCLUSIVELY Service Orders in this page
       const serviceOrders = allOrders.filter((o: any) => !!o.product?.isService && o.status !== 'PRE_ORDER');
       setOrders(serviceOrders);
-
-      if (detailOpen && selectedOrder) {
-        const newest = serviceOrders.find((o: any) => o.id === selectedOrder.id);
-        if (newest) setSelectedOrder(newest);
-      }
     } catch (err) {
       console.error('Fetch service orders error:', err);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [user?.id, tabValue, detailOpen, selectedOrder]);
+  }, [user?.id, tabValue]);
+
+  // Sync selected order data when orders list updates
+  useEffect(() => {
+    if (detailOpen && selectedOrder && orders.length > 0) {
+      const newest = orders.find((o) => o.id === selectedOrder.id);
+      if (newest && JSON.stringify(newest) !== JSON.stringify(selectedOrder)) {
+        setSelectedOrder(newest);
+      }
+    }
+  }, [orders, detailOpen, selectedOrder]);
 
   useEffect(() => {
     fetchOrders();
@@ -166,8 +187,11 @@ export default function SellerServiceOrdersPage() {
   const handleBid = async () => {
     if (!selectedOrder || !bidPrice || !bidDeliveryHours) return;
     setBidLoading(true);
+    const toastId = toast.loading('Đang gửi báo giá...');
+    const target = selectedOrder;
+    if (!target) return;
     try {
-      const res = await fetch(`/api/orders/${selectedOrder.id}/bid`, {
+      const res = await fetch(`/api/orders/${target.id}/bid`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -178,49 +202,66 @@ export default function SellerServiceOrdersPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Đã gửi báo giá thành công!');
+        toast.success('Đã gửi báo giá thành công!', { id: toastId });
         setBidPrice('');
         setBidDeliveryHours('');
         setDetailOpen(false);
         fetchOrders();
-      } else toast.error(data.error);
+      } else {
+        toast.error(data.error, { id: toastId });
+      }
     } finally { setBidLoading(false); }
   };
 
-  const handleAcceptService = async () => {
-    if (!selectedOrder) return;
-    setActionLoading(true);
+  const handleAcceptService = async (order?: Order) => {
+    const target = order || selectedOrder;
+    if (!target) return;
+    
+    if (order) setProcessingOrderId(order.id);
+    else setActionLoading(true);
+    
+    const toastId = toast.loading('Đang xử lý...');
     try {
-      const res = await fetch(`/api/orders/${selectedOrder.id}/accept-service`, {
+      const res = await fetch(`/api/orders/${target.id}/accept-service`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellerId: user?.id }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Đã xác nhận thực hiện đơn hàng!');
+        toast.success('Đã xác nhận thực hiện đơn hàng!', { id: toastId });
         setDetailOpen(false);
         fetchOrders();
-      } else toast.error(data.error);
-    } finally { setActionLoading(false); }
+      } else {
+        toast.error(data.error, { id: toastId });
+      }
+    } finally { 
+      if (order) setProcessingOrderId(null);
+      else setActionLoading(false); 
+    }
   };
 
   const handleDeliver = async () => {
     if (!selectedOrder || !deliveryContent) return;
     setActionLoading(true);
+    const toastId = toast.loading('Đang bàn giao...');
+    const target = selectedOrder;
+    if (!target) return;
     try {
-      const res = await fetch(`/api/orders/${selectedOrder.id}/deliver`, {
+      const res = await fetch(`/api/orders/${target.id}/deliver`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellerId: user?.id, content: deliveryContent }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Đã bàn giao đơn hàng thành công!');
+        toast.success('Đã bàn giao đơn hàng thành công!', { id: toastId });
         setDeliveryContent('');
         setDetailOpen(false);
         fetchOrders();
-      } else toast.error(data.error);
+      } else {
+        toast.error(data.error, { id: toastId });
+      }
     } finally { setActionLoading(false); }
   };
 
@@ -340,36 +381,22 @@ export default function SellerServiceOrdersPage() {
             <Table>
               <TableHead sx={{ bgcolor: '#f8fafc' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>THAO TÁC</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>ĐƠN HÀNG</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>GIÁ</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>TRẠNG THÁI</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>THỜI GIAN CÒN LẠI</TableCell>
                   <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>NGÀY ĐẶT</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }} align="right">THAO TÁC</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
-                  [1,2,3].map(i => <TableRow key={i}><TableCell colSpan={4}><Skeleton height={40} /></TableCell></TableRow>)
+                  [1,2,3].map(i => <TableRow key={i}><TableCell colSpan={6}><Skeleton height={40} /></TableCell></TableRow>)
                 ) : filteredOrders.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} align="center" sx={{ py: 5 }}>Không tìm thấy đơn hàng nào.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5 }}>Không tìm thấy đơn hàng nào.</TableCell></TableRow>
                 ) : (
                   filteredOrders.map(order => (
                     <TableRow key={order.id} hover>
-                      <TableCell sx={{ py: 1.5 }}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="Xem chi tiết & xử lý">
-                            <IconButton size="small" onClick={() => handleViewDetail(order)} sx={{ border: '1px solid #ddd6fe', color: '#7c3aed' }}>
-                              <VisibilityIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Chat với khách">
-                            <IconButton size="small" onClick={() => handleOpenChat(order)} sx={{ border: '1px solid #e2e8f0', color: '#3b82f6' }}>
-                              <ChatIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           {order.status === 'PRE_ORDER' && (
@@ -386,12 +413,88 @@ export default function SellerServiceOrdersPage() {
                       </TableCell>
                       <TableCell>{getStatusChip(order.status)}</TableCell>
                       <TableCell>
-                        { (order.status === 'IN_PROGRESS' || order.status === 'DELIVERED') && order.startedAt ? (
-                          <CountdownTimer startedAt={order.startedAt} durationHours={order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product.deliveryTimeHours || 0} />
-                        ) : '---'}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          { (order.status === 'IN_PROGRESS' || order.status === 'DELIVERED') && order.startedAt ? (
+                            <CountdownTimer startedAt={order.startedAt} durationHours={order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product.deliveryTimeHours || 0} />
+                          ) : '---'}
+                          
+                          {order.status === 'IN_PROGRESS' && (
+                            <Tooltip title="Gia hạn thêm thời gian">
+                              <IconButton 
+                                size="small" 
+                                color="info" 
+                                onClick={() => { setExtendingOrder(order); setExtendOpen(true); }}
+                                sx={{ p: 0.5, border: '1px solid #e0f2fe', bgcolor: '#f0f9ff' }}
+                              >
+                                <UpdateIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Typography variant="caption" sx={{ color: '#64748b' }}>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <Button 
+                            variant="outlined" size="small" 
+                            startIcon={<VisibilityIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => handleViewDetail(order)} 
+                            sx={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'none', borderRadius: 1.5, py: 0.5 }}
+                          >
+                            Chi tiết
+                          </Button>
+
+                          <Button 
+                            variant="outlined" size="small" color="info"
+                            startIcon={<ChatIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => handleOpenChat(order)} 
+                            sx={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'none', borderRadius: 1.5, py: 0.5 }}
+                          >
+                            Chat
+                          </Button>
+
+                          {order.status === 'NEGOTIATING' && (
+                            <Button 
+                              variant="contained" size="small" color="warning" disableElevation
+                              onClick={() => handleViewDetail(order)}
+                              sx={{ fontSize: '0.65rem', py: 0.5, px: 1, fontWeight: 800, minWidth: 'fit-content', borderRadius: 1.5 }}
+                            >
+                              BÁO GIÁ
+                            </Button>
+                          )}
+
+                          {order.status === 'PENDING_ACCEPTANCE' && (
+                            <Button 
+                              variant="contained" size="small" color="primary" disableElevation
+                              onClick={() => handleOpenConfirm(
+                                'Xác nhận thực hiện',
+                                'Bạn có chắc chắn muốn bắt đầu thực hiện đơn hàng này? Thời gian hoàn thành sẽ bắt đầu đếm ngược ngay bây giờ.',
+                                () => handleAcceptService(order)
+                              )}
+                              disabled={processingOrderId === order.id}
+                              sx={{ fontSize: '0.65rem', py: 0.5, px: 1, fontWeight: 800, minWidth: 'fit-content', borderRadius: 1.5 }}
+                            >
+                              {processingOrderId === order.id ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN'}
+                            </Button>
+                          )}
+
+                          {order.status === 'IN_PROGRESS' && (
+                            <Button 
+                              variant="contained" size="small" color="secondary" disableElevation
+                              onClick={() => handleOpenConfirm(
+                                'Xác nhận bàn giao',
+                                'Bạn đã chuẩn bị sẵn nội dung bàn giao chưa? Nhấn Đồng ý để mở khung nhập nội dung và bàn giao cho khách.',
+                                () => handleViewDetail(order),
+                                'secondary'
+                              )}
+                              sx={{ fontSize: '0.65rem', py: 0.5, px: 1, fontWeight: 800, minWidth: 'fit-content', borderRadius: 1.5, bgcolor: '#7c3aed' }}
+                            >
+                              BÀN GIAO
+                            </Button>
+                          )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))
@@ -484,7 +587,7 @@ export default function SellerServiceOrdersPage() {
                 )}
 
                 {selectedOrder?.status === 'PENDING_ACCEPTANCE' && (
-                  <Button fullWidth variant="contained" color="primary" onClick={handleAcceptService} disabled={actionLoading} sx={{ fontWeight: 800, py: 1.5 }}>
+                  <Button fullWidth variant="contained" color="primary" onClick={() => handleAcceptService()} disabled={actionLoading} sx={{ fontWeight: 800, py: 1.5 }}>
                     {actionLoading ? 'ĐANG XỬ LÝ...' : 'BẮT ĐẦU THỰC HIỆN'}
                   </Button>
                 )}
@@ -518,6 +621,28 @@ export default function SellerServiceOrdersPage() {
         </Dialog>
 
         <QuickChatDialog open={chatOpen} onClose={() => setChatOpen(false)} targetUser={targetChatUser} />
+
+        {/* Generic Confirmation Dialog */}
+        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+          <DialogTitle sx={{ fontWeight: 800 }}>{confirmConfig.title}</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2">{confirmConfig.message}</Typography>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setConfirmOpen(false)} color="inherit" sx={{ fontWeight: 700 }}>Hủy</Button>
+            <Button 
+              variant="contained" 
+              color={confirmConfig.color || 'primary'}
+              onClick={() => {
+                confirmConfig.onConfirm();
+                setConfirmOpen(false);
+              }} 
+              sx={{ borderRadius: 2, fontWeight: 700 }}
+            >
+              Đồng ý
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Extend Dialog */}
         <Dialog open={extendOpen} onClose={() => setExtendOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>

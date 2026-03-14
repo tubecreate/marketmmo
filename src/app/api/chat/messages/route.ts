@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import * as jose from 'jose';
+import { broadcastToSocket } from '@/lib/socket-broadcaster';
 
 async function getUser(req?: Request) {
   const token = (await cookies()).get('auth-token')?.value;
@@ -94,6 +95,10 @@ export async function POST(req: Request) {
       where: { roomId: room.id, userId: user.id },
       data: { lastRead: new Date() }
     });
+
+    // Notify via Socket.io
+    broadcastToSocket(`room:${room.id}`, 'message:new', message);
+    broadcastToSocket(`user:${targetUserId}`, 'room:update', {});
 
     return NextResponse.json({ success: true, message });
   } catch (error: any) {

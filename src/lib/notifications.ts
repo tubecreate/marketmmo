@@ -1,5 +1,5 @@
-
 import { prisma } from '@/lib/db';
+import { broadcastToSocket } from './socket-broadcaster';
 
 export async function createNotification({
   userId,
@@ -24,6 +24,9 @@ export async function createNotification({
        VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
       id, userId, title, content, type, targetUrl || null, createdAt
     );
+
+    // Broadcast via Socket.io
+    broadcastToSocket(`user:${userId}`, 'notification:new', { id, title, content, type, targetUrl, createdAt });
     
     console.log('Notification created via raw SQL:', id);
     return { id, userId, title };
@@ -32,9 +35,13 @@ export async function createNotification({
     // Fallback to model-based if SQL fails (unlikely if table exists)
     try {
       if ((prisma as any).notification) {
-        return await (prisma as any).notification.create({
+        const notif = await (prisma as any).notification.create({
           data: { userId, title, content, type, targetUrl }
         });
+        if (notif) {
+          broadcastToSocket(`user:${userId}`, 'notification:new', notif);
+        }
+        return notif;
       }
     } catch (e) {
       console.error('Fallback notification creation also failed:', e);

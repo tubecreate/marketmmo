@@ -1,4 +1,5 @@
 import { prisma } from './db';
+import { broadcastToSocket } from './socket-broadcaster';
 
 const SYSTEM_BOT_ID = 'SYSTEM_BOT';
 
@@ -59,7 +60,7 @@ export async function sendSystemMessage(userId: string, content: string) {
     }
 
     // 3. Tạo tin nhắn với isSystem = true
-    await prisma.chatMessage.create({
+    const message = await prisma.chatMessage.create({
       data: {
         roomId: room.id,
         senderId: SYSTEM_BOT_ID,
@@ -67,6 +68,10 @@ export async function sendSystemMessage(userId: string, content: string) {
         isSystem: true
       }
     });
+
+    // Notify via Socket.io
+    broadcastToSocket(`room:${room.id}`, 'message:new', message);
+    broadcastToSocket(`user:${userId}`, 'room:update', {});
 
   } catch (error) {
     console.error('Failed to send system message to', userId, error);

@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { useSocket } from './SocketContext';
 
 export interface Notification {
   id: string;
@@ -61,15 +62,30 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   };
 
+  const { socket } = useSocket();
+
   useEffect(() => {
     if (user) {
       const timeout = setTimeout(() => {
         refreshNotifications();
       }, 0);
-      const interval = setInterval(refreshNotifications, 30000); // Pool every 30s
+      
+      const interval = setInterval(refreshNotifications, 30000); // Poll every 30s as fallback
+      
+      // Socket.io Real-time
+      if (socket) {
+        socket.on('notification:new', (payload: any) => {
+          console.log('New notification received via Socket.io:', payload);
+          refreshNotifications(); // Or we can optimize by appending the new notification directly
+        });
+      }
+
       return () => {
         clearTimeout(timeout);
         clearInterval(interval);
+        if (socket) {
+          socket.off('notification:new');
+        }
       };
     } else {
       setTimeout(() => {
@@ -77,7 +93,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setUnreadNotificationsCount(0);
       }, 0);
     }
-  }, [user, refreshNotifications]);
+  }, [user, refreshNotifications, socket]);
 
   return (
     <NotificationContext.Provider value={{ notifications, unreadNotificationsCount, refreshNotifications, markAsRead }}>
