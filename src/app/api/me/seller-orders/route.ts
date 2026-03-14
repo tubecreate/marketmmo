@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const orders = await prisma.order.findMany({
       where,
       include: {
-        product: { select: { title: true, slug: true, thumbnail: true } },
+        product: { select: { title: true, slug: true, thumbnail: true, isService: true } },
         buyer: { select: { id: true, username: true } },
       },
       // deliveredContent and warrantyExpire are base fields of Order, they are included by default 

@@ -24,7 +24,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   const { id } = await context.params;
   try {
     const data = await req.json();
-    const { name, price, description } = data;
+    const { name, price, allowBidding, deliveryTimeHours, description } = data;
     
     if (!name || isNaN(parseFloat(price))) {
       return NextResponse.json({ error: 'Invalid name or price' }, { status: 400 });
@@ -40,9 +40,11 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         productId: id,
         name,
         price: parseFloat(price),
+        allowBidding: !!allowBidding,
+        deliveryTimeHours: deliveryTimeHours ? parseInt(deliveryTimeHours) : null,
         description: description || null,
         sortOrder: (lastVariant?.sortOrder || 0) + 1
-      }
+      } as any
     });
 
     return NextResponse.json({ success: true, variant });

@@ -32,6 +32,8 @@ export interface ProductCardProps {
   isSponsored?: boolean;
   shortDescription?: string;
   status?: string;
+  isService?: boolean;
+  allowBidding?: boolean;
 }
 
 function formatPrice(price: number): string {
@@ -70,6 +72,7 @@ function getCategoryBgColor(categoryLabel?: string): string {
 export default function ProductCard({
   title, slug, price, thumbnail, type, categoryLabel,
   soldCount, rating, isSponsored, shortDescription, status,
+  isService, allowBidding
 }: ProductCardProps) {
   const isDigital = type === 'DIGITAL';
   const emoji = getCategoryEmoji(categoryLabel);
@@ -172,8 +175,8 @@ export default function ProductCard({
         {/* Content */}
         <CardContent sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', gap: 1, '&:last-child': { pb: 2 } }}>
           <Box>
-            <Typography variant="caption" sx={{ color: isDigital ? '#4cc752' : '#7c3aed', fontWeight: 800, fontSize: '0.6rem', letterSpacing: 0.8, textTransform: 'uppercase' }}>
-              {isDigital ? 'SẢN PHẨM SỐ' : 'DỊCH VỤ TÀI KHOẢN'}
+            <Typography variant="caption" sx={{ color: isService ? '#f59e0b' : (isDigital ? '#4cc752' : '#7c3aed'), fontWeight: 800, fontSize: '0.6rem', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+              {isService ? 'DỊCH VỤ' : (isDigital ? 'SẢN PHẨM SỐ' : 'DỊCH VỤ TÀI KHOẢN')}
             </Typography>
             <Typography
               variant="subtitle2"
@@ -214,12 +217,20 @@ export default function ProductCard({
           {/* Price Section */}
           <Box sx={{ mt: 'auto' }}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-              <Typography sx={{ fontWeight: 800, color: '#0f172a', fontSize: '1.25rem' }}>
-                {formatPrice(price)}
-              </Typography>
-              <Typography sx={{ fontWeight: 600, color: '#94a3b8', fontSize: '0.75rem' }}>
-                VNĐ
-              </Typography>
+              {isService && allowBidding ? (
+                <Typography sx={{ fontWeight: 800, color: '#ef4444', fontSize: '1.25rem' }}>
+                  Thỏa thuận
+                </Typography>
+              ) : (
+                <>
+                  <Typography sx={{ fontWeight: 800, color: '#0f172a', fontSize: '1.25rem' }}>
+                    {formatPrice(price)}
+                  </Typography>
+                  <Typography sx={{ fontWeight: 600, color: '#94a3b8', fontSize: '0.75rem' }}>
+                    VNĐ
+                  </Typography>
+                </>
+              )}
             </Box>
             
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
@@ -237,7 +248,7 @@ export default function ProductCard({
           <Box
             className="buy-button"
             sx={{
-              bgcolor: status === 'CLOSED' ? '#94a3b8' : '#4cc752',
+              bgcolor: status === 'CLOSED' ? '#94a3b8' : (isService && allowBidding ? '#ef4444' : '#4cc752'),
               color: 'white',
               textAlign: 'center',
               py: 1.2,
@@ -248,7 +259,7 @@ export default function ProductCard({
               mt: 1,
             }}
           >
-            {status === 'CLOSED' ? 'Tạm ngưng' : 'Mua ngay'}
+            {status === 'CLOSED' ? 'Tạm ngưng' : (isService && allowBidding ? 'Thương lượng' : 'Mua ngay')}
           </Box>
         </CardContent>
       </Link>

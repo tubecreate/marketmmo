@@ -26,8 +26,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Không có quyền thực hiện' }, { status: 403 });
     }
 
-    if (order.status !== 'HOLDING') {
-      return NextResponse.json({ error: 'Đơn hàng không ở trạng thái tạm giữ' }, { status: 400 });
+    if (order.status !== 'HOLDING' && order.status !== 'DELIVERED') {
+      return NextResponse.json({ error: 'Đơn hàng không ở trạng thái có thể xác nhận' }, { status: 400 });
     }
 
     const sellerReceives = order.amount - order.fee;

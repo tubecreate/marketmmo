@@ -21,7 +21,10 @@ import QuickChatDialog from '@/components/chat/QuickChatDialog';
 
 const STATUS_TABS = [
   { label: 'Tất cả', value: 'all' },
-  { label: 'Đặt trước', value: 'PRE_ORDER' },
+  { label: 'Thương lượng', value: 'NEGOTIATING' },
+  { label: 'Chờ xác nhận', value: 'PENDING_ACCEPTANCE' },
+  { label: 'Đang làm', value: 'IN_PROGRESS' },
+  { label: 'Đã bàn giao', value: 'DELIVERED' },
   { label: 'Tạm giữ', value: 'HOLDING' },
   { label: 'Hoàn thành', value: 'COMPLETED' },
   { label: 'Khiếu nại', value: 'DISPUTED' },
@@ -64,12 +67,75 @@ export default function SellerOrdersPage() {
       const res = await fetch(`/api/me/seller-orders?userId=${uid}&status=${tabValue}`);
       const data = await res.json();
       setOrders(Array.isArray(data) ? data : []);
+      
+      // Update selectedOrder if open to show newest status
+      if (detailOpen && selectedOrder) {
+        const newest = data.find((o: any) => o.id === selectedOrder.id);
+        if (newest) setSelectedOrder(newest);
+      }
     } catch (err) {
       console.error('Fetch seller orders error:', err);
     } finally {
       setLoading(false);
     }
-  }, [user, tabValue]);
+  }, [user, tabValue, detailOpen, selectedOrder]);
+
+  const [bidPrice, setBidPrice] = useState('');
+  const [deliveryContent, setDeliveryContent] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const handleBid = async () => {
+    if (!selectedOrder || !bidPrice) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/bid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user?.id, price: bidPrice }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Đã gửi báo giá thành công!');
+        setBidPrice('');
+        fetchOrders();
+      } else toast.error(data.error);
+    } finally { setActionLoading(false); }
+  };
+
+  const handleAcceptService = async () => {
+    if (!selectedOrder) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/accept-service`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user?.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Đã xác nhận thực hiện đơn hàng!');
+        fetchOrders();
+      } else toast.error(data.error);
+    } finally { setActionLoading(false); }
+  };
+
+  const handleDeliver = async () => {
+    if (!selectedOrder || !deliveryContent) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/deliver`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user?.id, content: deliveryContent }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Đã bàn giao đơn hàng thành công!');
+        setDeliveryContent('');
+        fetchOrders();
+      } else toast.error(data.error);
+    } finally { setActionLoading(false); }
+  };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -78,11 +144,15 @@ export default function SellerOrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const filteredOrders = orders.filter(o => 
-    o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.product?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.buyer?.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOrders = orders.filter(o => {
+    const matchSearch = o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.product?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.buyer?.username.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // EXCLUSIVELY Digital Orders in this page
+    const isProductService = !!o.product?.isService;
+    return matchSearch && !isProductService;
+  });
 
   const getStatusChip = (status: string) => {
     switch (status) {
@@ -91,6 +161,10 @@ export default function SellerOrdersPage() {
       case 'DISPUTED': return <Chip label="Khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'REFUNDED': return <Chip label="Hoàn tiền" size="small" sx={{ fontWeight: 600, bgcolor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'PRE_ORDER': return <Chip label="Đang chờ hàng" size="small" sx={{ fontWeight: 600, bgcolor: '#fff7ed', color: '#9a3412', border: '1px solid #ffedd5', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'NEGOTIATING': return <Chip label="Thương lượng" size="small" sx={{ fontWeight: 600, bgcolor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'PENDING_ACCEPTANCE': return <Chip label="Chờ bạn xác nhận" size="small" sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'IN_PROGRESS': return <Chip label="Đang thực hiện" size="small" sx={{ fontWeight: 600, bgcolor: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'DELIVERED': return <Chip label="Đã bàn giao" size="small" sx={{ fontWeight: 600, bgcolor: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'CANCELLED': return <Chip label="Đã huỷ" size="small" sx={{ fontWeight: 600, bgcolor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', fontSize: '0.7rem', borderRadius: 1 }} />;
       default: return <Chip label={status} size="small" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />;
     }
@@ -116,7 +190,7 @@ export default function SellerOrdersPage() {
         </Box>
 
         <Paper elevation={0} sx={{ p: 0, borderRadius: '0 0 12px 12px', border: '1px solid #e2e8f0', borderTop: 'none', bgcolor: 'white', overflow: 'hidden' }}>
-          {/* Tabs Section */}
+          {/* Status Tabs Section */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
             <Tabs 
               value={tabValue} 
@@ -381,7 +455,42 @@ export default function SellerOrdersPage() {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, flexDirection: 'column', gap: 1 }}>
+          {selectedOrder?.status === 'NEGOTIATING' && (
+            <Box sx={{ width: '100%', mb: 1, p: 2, bgcolor: '#fffbeb', borderRadius: 2, border: '1px solid #fef3c7' }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, mb: 1.5, color: '#854d0e' }}>BÁO GIÁ CHO KHÁCH HÀNG</Typography>
+              <TextField
+                fullWidth size="small" label="Giá đề xuất (VNĐ)" type="number"
+                value={bidPrice} onChange={(e) => setBidPrice(e.target.value)}
+                sx={{ mb: 1.5, bgcolor: 'white' }}
+              />
+              <Button fullWidth variant="contained" color="warning" onClick={handleBid} disabled={actionLoading || !bidPrice} sx={{ fontWeight: 800 }}>
+                {actionLoading ? 'ĐANG GỬI...' : 'GỬI BÁO GIÁ'}
+              </Button>
+            </Box>
+          )}
+
+          {selectedOrder?.status === 'PENDING_ACCEPTANCE' && (
+            <Button fullWidth variant="contained" color="primary" onClick={handleAcceptService} disabled={actionLoading} sx={{ fontWeight: 800, py: 1.5 }}>
+              {actionLoading ? 'ĐANG XỬ LÝ...' : 'BẮT ĐẦU THỰC HIỆN'}
+            </Button>
+          )}
+
+          {selectedOrder?.status === 'IN_PROGRESS' && (
+            <Box sx={{ width: '100%', mb: 1, p: 2, bgcolor: '#f5f3ff', borderRadius: 2, border: '1px solid #ddd6fe' }}>
+              <Typography variant="body2" sx={{ fontWeight: 700, mb: 1.5, color: '#5b21b6' }}>BÀN GIAO SẢN PHẨM</Typography>
+              <TextField
+                fullWidth multiline rows={4} label="Nội dung/Link bàn giao"
+                placeholder="Nhập tài khoản, mật khẩu hoặc link file zip, source code..."
+                value={deliveryContent} onChange={(e) => setDeliveryContent(e.target.value)}
+                sx={{ mb: 1.5, bgcolor: 'white' }}
+              />
+              <Button fullWidth variant="contained" color="secondary" onClick={handleDeliver} disabled={actionLoading || !deliveryContent} sx={{ fontWeight: 800, bgcolor: '#7c3aed' }}>
+                {actionLoading ? 'ĐANG GỬI...' : 'XÁC NHẬN BÀN GIAO'}
+              </Button>
+            </Box>
+          )}
+
           <Button onClick={() => setDetailOpen(false)} fullWidth variant="outlined" sx={{ borderRadius: 2, fontWeight: 700 }}>
             Đóng
           </Button>

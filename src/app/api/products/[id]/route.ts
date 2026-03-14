@@ -56,18 +56,24 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       }
     }
 
+    let updateData: any = {
+      title: data.title,
+      shortDescription: data.shortDescription,
+      description: data.description,
+      price: data.price ? parseFloat(data.price) : undefined,
+      priceMax: data.priceMax ? parseFloat(data.priceMax) : undefined,
+      status: nextStatus,
+      categoryId: data.categoryId,
+      thumbnail: data.thumbnail,
+    };
+
+    if (data.isService !== undefined) updateData.isService = !!data.isService;
+    if (data.allowBidding !== undefined) updateData.allowBidding = !!data.allowBidding;
+    if (data.deliveryTimeHours !== undefined) updateData.deliveryTimeHours = data.deliveryTimeHours ? parseInt(data.deliveryTimeHours) : null;
+
     const updated = await prisma.product.update({
       where: { id },
-      data: {
-        title: data.title,
-        shortDescription: data.shortDescription,
-        description: data.description,
-        price: data.price ? parseFloat(data.price) : undefined,
-        priceMax: data.priceMax ? parseFloat(data.priceMax) : undefined,
-        status: nextStatus,
-        categoryId: data.categoryId,
-        thumbnail: data.thumbnail,
-      } as any
+      data: updateData
     });
 
     if (data.status === 'ACTIVE' && isAdmin) {

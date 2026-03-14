@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     // 1. Fetch buyer and product in parallel
     const [buyer, product, variant] = await Promise.all([
       prisma.user.findUnique({ where: { id: buyerId }, select: { id: true, balance: true, isActive: true } }),
-      prisma.product.findUnique({ where: { id: productId }, select: { id: true, sellerId: true, status: true, soldCount: true, warrantyDays: true } }),
+      prisma.product.findUnique({ where: { id: productId }, select: { id: true, sellerId: true, status: true, soldCount: true, warrantyDays: true, isService: true, allowBidding: true } }),
       variantId ? prisma.productVariant.findUnique({ where: { id: variantId }, select: { id: true, price: true, name: true } }) : Promise.resolve(null),
     ]);
 
@@ -26,7 +26,108 @@ export async function POST(req: Request) {
     if (!product || product.status !== 'ACTIVE') return NextResponse.json({ error: 'Gian hàng không khả dụng' }, { status: 400 });
     if (buyer.id === product.sellerId) return NextResponse.json({ error: 'Không thể mua hàng từ gian hàng của chính mình' }, { status: 400 });
 
-    // 2. Lock available stock items (FIFO) for the selected variant
+    // Check if it's a SERVICE item
+    if (product.isService) {
+      if (product.allowBidding) {
+        // ── SERVICE BIDDING FLOW ──
+        // No upfront charge. Order goes to NEGOTIATING.
+        const order = await prisma.order.create({
+          data: {
+            buyerId,
+            sellerId: product.sellerId,
+            productId,
+            amount: 0, 
+            customPrice: null, // To be bidded by seller
+            quantity: 1, // Services usually 1 unit
+            fee: 0,
+            status: 'NEGOTIATING',
+            deliveredContent: null,
+            variantName: variant?.name || 'Sản phẩm dịch vụ',
+            variantId: variantId || null,
+          } as any,
+        });
+
+        // Notify Seller
+        await sendSystemMessage(
+          product.sellerId,
+          `💬 Có khách yêu cầu dịch vụ "${variant?.name || 'Kho chung'}"! \nMã đơn: #${order.id.slice(-8).toUpperCase()}\nVui lòng vào chi tiết đơn để BÁO GIÁ cho khách hàng.`
+        );
+        // Notify Buyer
+        await sendSystemMessage(
+          buyerId,
+          `📝 Tạo đơn yêu cầu thành công!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nVui lòng chờ người bán phản hồi báo giá.`
+        );
+
+        return NextResponse.json({
+          success: true,
+          order: {
+            id: order.id,
+            amount: 0,
+            quantity: 1,
+            status: 'NEGOTIATING',
+            variantName: variant?.name || 'Sản phẩm dịch vụ',
+          },
+        });
+      } else {
+        // ── SERVICE FIXED PRICE FLOW ──
+        const unitPrice = variant ? variant.price : (
+          await prisma.productVariant.findFirst({ where: { productId }, orderBy: { price: 'asc' } })
+        )?.price ?? 0;
+        
+        const totalAmount = unitPrice * quantity;
+        const platformFee = Math.floor(totalAmount * 0.05);
+        const sellerReceives = totalAmount - platformFee;
+
+        if (buyer.balance < totalAmount) {
+          return NextResponse.json({
+            error: `Số dư không đủ. Cần ${totalAmount.toLocaleString('vi-VN')}đ, còn ${buyer.balance.toLocaleString('vi-VN')}đ.`
+          }, { status: 400 });
+        }
+
+        const [order] = await prisma.$transaction([
+          prisma.order.create({
+            data: {
+              buyerId,
+              sellerId: product.sellerId,
+              productId,
+              amount: totalAmount,
+              quantity,
+              fee: platformFee,
+              status: 'PENDING_ACCEPTANCE', // Wait for seller to accept
+              deliveredContent: null,
+              variantName: variant?.name || 'Sản phẩm dịch vụ',
+              variantId: variantId || null,
+            } as any,
+          }),
+          prisma.user.update({
+            where: { id: buyerId },
+            data: { balance: { decrement: totalAmount } },
+          }),
+          prisma.user.update({
+            where: { id: product.sellerId },
+            data: { holdBalance: { increment: sellerReceives } },
+          }),
+        ]);
+
+        await sendSystemMessage(
+          product.sellerId,
+          `💼 Có đơn đặt hàng dịch vụ mới!\nMã đơn: #${order.id.slice(-8).toUpperCase()}\nKhách đã thanh toán: ${totalAmount.toLocaleString('vi-VN')}đ (Đang tạm giữ).\nVui lòng vào chi tiết đơn và ấn BẮT ĐẦU LÀM.`
+        );
+
+        return NextResponse.json({
+          success: true,
+          order: {
+            id: order.id,
+            amount: totalAmount,
+            quantity,
+            status: 'PENDING_ACCEPTANCE',
+            variantName: variant?.name || 'Sản phẩm dịch vụ',
+          },
+        });
+      }
+    }
+
+    // 2. Lock available stock items (FIFO) for the selected variant (DIGITAL ONLY)
     const availableItems = await prisma.productItem.findMany({
       where: {
         productId,

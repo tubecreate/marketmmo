@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import InventoryIcon from '@mui/icons-material/Inventory';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -23,7 +25,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import LoginModal from '@/components/auth/LoginModal';
 
-interface Variant { id: string; name: string; price: number; description?: string | null; _count?: { items: number }; }
+interface Variant { id: string; name: string; price: number; allowBidding: boolean; deliveryTimeHours: number | null; description?: string | null; _count?: { items: number }; }
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -214,13 +216,24 @@ export default function ProductDetailPage() {
           <Grid size={{ xs: 12, md: 7.5 }}>
             <Paper elevation={0} sx={{ p: { xs: 2, md: 4 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
 
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Typography variant="caption" sx={{ color: product.isService ? '#f59e0b' : (product.type === 'DIGITAL' ? '#4cc752' : '#7c3aed'), fontWeight: 800, fontSize: '0.65rem', letterSpacing: 0.8, textTransform: 'uppercase', bgcolor: product.isService ? '#fef3c7' : (product.type === 'DIGITAL' ? '#f0fdf4' : '#f3e8ff'), px: 1, py: 0.5, borderRadius: 1 }}>
+                  {product.isService ? 'DỊCH VỤ' : (product.type === 'DIGITAL' ? 'SẢN PHẨM SỐ' : 'DỊCH VỤ TÀI KHOẢN')}
+                </Typography>
+                {product.isService && product.deliveryTimeHours && (
+                  <Typography variant="caption" sx={{ color: '#0284c7', fontWeight: 700, bgcolor: '#e0f2fe', px: 1, py: 0.5, borderRadius: 1 }}>
+                    ⏳ GIAO TRONG {product.deliveryTimeHours} GIỜ
+                  </Typography>
+                )}
+              </Box>
+
               <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a', mb: 2, textTransform: 'uppercase', lineHeight: 1.4 }}>
                 {String(product.title || '')}
               </Typography>
 
-              {/* Price — shows selected variant price */}
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#16a34a', mb: 2 }}>
-                {displayPrice.toLocaleString('vi-VN')} VNĐ
+              {/* Price — shows selected variant price or "Thoả thuận" */}
+              <Typography variant="h4" sx={{ fontWeight: 800, color: (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '#ef4444' : '#16a34a', mb: 2 }}>
+                {(product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? 'Thỏa thuận' : `${displayPrice.toLocaleString('vi-VN')} VNĐ`}
               </Typography>
 
               {/* Stats row */}
@@ -319,12 +332,14 @@ export default function ProductDetailPage() {
                             )}
                           </Box>
                           <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 2 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#15803d' }}>
-                              {v.price.toLocaleString('vi-VN')}đ
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: (product.isService && (product.allowBidding || v.allowBidding)) ? '#ea580c' : '#15803d' }}>
+                              {(product.isService && (product.allowBidding || v.allowBidding)) ? 'Thoả thuận' : `${v.price.toLocaleString('vi-VN')}đ`}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: stock > 0 ? '#16a34a' : '#ea580c', fontWeight: 600 }}>
-                              {stock > 0 ? `${stock} còn lại` : '⏳ Đặt trước'}
-                            </Typography>
+                            {!(product.isService && (product.allowBidding || v.allowBidding)) && (
+                              <Typography variant="caption" sx={{ color: stock > 0 ? '#16a34a' : '#ea580c', fontWeight: 600 }}>
+                                {stock > 0 ? `${stock} còn lại` : '⏳ Đặt trước'}
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
                       );
@@ -333,22 +348,24 @@ export default function ProductDetailPage() {
                 </Box>
               )}
 
-              {/* Quantity */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>SỐ LƯỢNG</Typography>
-                <Box sx={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: 1, overflow: 'hidden' }}>
-                  <Button onClick={() => handleQtyChange('sub')} sx={{ minWidth: 40, p: 0, color: '#475569', bgcolor: '#f8fafc', borderRadius: 0 }}>-</Button>
-                  <Box sx={{ width: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid #cbd5e1', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
-                    {quantity}
+              {/* Quantity (Hidden if Bidding is enabled) */}
+              {!(product.isService && (product.allowBidding || selectedVar?.allowBidding)) && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>SỐ LƯỢNG</Typography>
+                  <Box sx={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: 1, overflow: 'hidden' }}>
+                    <Button onClick={() => handleQtyChange('sub')} sx={{ minWidth: 40, p: 0, color: '#475569', bgcolor: '#f8fafc', borderRadius: 0 }}>-</Button>
+                    <Box sx={{ width: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid #cbd5e1', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
+                      {quantity}
+                    </Box>
+                    <Button onClick={() => handleQtyChange('add')} sx={{ minWidth: 40, p: 0, color: '#475569', bgcolor: '#f8fafc', borderRadius: 0 }}>+</Button>
                   </Box>
-                  <Button onClick={() => handleQtyChange('add')} sx={{ minWidth: 40, p: 0, color: '#475569', bgcolor: '#f8fafc', borderRadius: 0 }}>+</Button>
+                  {selectedVar && (
+                    <Typography variant="body2" color="text.secondary">
+                      Tổng: <strong style={{ color: '#16a34a' }}>{(selectedVar.price * quantity).toLocaleString('vi-VN')}đ</strong>
+                    </Typography>
+                  )}
                 </Box>
-                {selectedVar && (
-                  <Typography variant="body2" color="text.secondary">
-                    Tổng: <strong style={{ color: '#16a34a' }}>{(selectedVar.price * quantity).toLocaleString('vi-VN')}đ</strong>
-                  </Typography>
-                )}
-              </Box>
+              )}
 
               {/* Buy CTA */}
               {product.status === 'CLOSED' && (
@@ -361,6 +378,12 @@ export default function ProductDetailPage() {
                   {buyError}
                 </Alert>
               )}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <AccessTimeIcon sx={{ color: '#64748b', fontSize: 18 }} />
+                  <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+                    THỜI GIAN GIAO: <span style={{ color: '#1e293b' }}>{selectedVar?.deliveryTimeHours || product.deliveryTimeHours || 'Thỏa thuận'} GIỜ</span>
+                  </Typography>
+                </Box>
               {!user ? (
                 <>
                   <Box sx={{ p: 2, bgcolor: '#fefce8', borderRadius: 1, mb: 2, display: 'flex', gap: 1 }}>
@@ -390,13 +413,13 @@ export default function ProductDetailPage() {
                   disabled={buying || product.status === 'CLOSED'}
                   startIcon={buying ? <CircularProgress size={20} color="inherit" /> : <ShoppingCartIcon />}
                   sx={{ 
-                    bgcolor: selectedStock === 0 ? '#1e293b' : '#16a34a', 
+                    bgcolor: (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '#ef4444' : (selectedStock === 0 && !product.isService ? '#1e293b' : '#16a34a'), 
                     color: 'white', 
                     fontWeight: 800, fontSize: '1.1rem', py: 1.5, borderRadius: 1, 
-                    '&:hover': { bgcolor: selectedStock === 0 ? '#334155' : '#15803d' } 
+                    '&:hover': { bgcolor: (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '#dc2626' : (selectedStock === 0 && !product.isService ? '#334155' : '#15803d') } 
                   }}
                 >
-                  {product.status === 'CLOSED' ? 'TẠM NGƯNG' : buying ? 'ĐANG XỬ LÝ...' : selectedStock === 0 ? '⏳ ĐẶT TRƯỚC NGAY' : 'MUA NGAY'}
+                  {product.status === 'CLOSED' ? 'TẠM NGƯNG' : buying ? 'ĐANG XỬ LÝ...' : (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '💬 TẠO ĐƠN THƯƠNG LƯỢNG' : selectedStock === 0 && !product.isService ? '⏳ ĐẶT TRƯỚC NGAY' : 'MUA NGAY'}
                 </Button>
               )}
             </Paper>
@@ -499,7 +522,7 @@ export default function ProductDetailPage() {
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
           <Box sx={{ fontSize: '3rem', mb: 1 }}>{orderResult?.preOrder ? '⏳' : '🎉'}</Box>
           <Typography variant="h5" sx={{ fontWeight: 800, color: orderResult?.preOrder ? '#d97706' : '#16a34a' }}>
-            {orderResult?.preOrder ? 'Đặt Trước Thành Công!' : 'Mua Hàng Thành Công!'}
+            {orderResult?.preOrder ? 'Đặt Trước Thành Công!' : (orderResult?.status === 'NEGOTIATING' ? 'Tạo Đơn Thành Công!' : 'Mua Hàng Thành Công!')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Mã đơn hàng: <strong style={{ color: '#0f172a' }}>#{orderResult?.id?.toString().slice(-8).toUpperCase()}</strong>
@@ -532,6 +555,14 @@ export default function ProductDetailPage() {
             <Alert severity="info" sx={{ borderRadius: 2, fontSize: '0.85rem' }}>
               <strong>Đơn đặt trước</strong> — Hàng sẽ được giao tự động khi người bán nhập kho. 
               Bạn có thể huỷ đặt trước bất kỳ lúc nào trong trang Quản lý đơn hàng.
+            </Alert>
+          ) : orderResult?.status === 'NEGOTIATING' ? (
+            <Alert severity="warning" sx={{ borderRadius: 2, fontSize: '0.85rem' }}>
+              <strong>Đang thương lượng</strong> — Đơn hàng đã được tạo. Bạn hãy vào trang chi tiết đơn hàng để đàm phán giá với người bán. Tiền trong ví chưa bị trừ.
+            </Alert>
+          ) : orderResult?.status === 'PENDING_ACCEPTANCE' && product.isService ? (
+            <Alert severity="info" sx={{ borderRadius: 2, fontSize: '0.85rem' }}>
+              <strong>Chờ xác nhận</strong> — Đơn đặt hàng dịch vụ thành công! Tiền của bạn đang được tạm giữ an toàn. Vui lòng chờ người bán bắt đầu công việc.
             </Alert>
           ) : (
             <>

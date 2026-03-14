@@ -87,6 +87,12 @@ model Product {
   rating       Float            @default(0)
   warrantyDays Int              @default(3)
   lastSoldAt   DateTime?
+  
+  // Dịch vụ / Service items
+  isService         Boolean     @default(false)
+  allowBidding      Boolean     @default(false) // Báo giá theo yêu cầu
+  deliveryTimeHours Int?        // Thời gian hoàn thành cam kết (giờ)
+
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   orders       Order[]
@@ -98,16 +104,18 @@ model Product {
 }
 
 model ProductVariant {
-  id          String        @id @default(cuid())
-  productId   String
-  name        String
-  price       Float
-  description String?
-  sortOrder   Int           @default(0)
-  createdAt   DateTime      @default(now())
-  items       ProductItem[]
-  product     Product       @relation(fields: [productId], references: [id])
-  orders      Order[]
+  id            String        @id @default(cuid())
+  productId     String
+  name          String
+  price         Float
+  allowBidding  Boolean      @default(false)
+  deliveryTimeHours Int?      // Thời gian thực hiện (giờ) cho sản phẩm này
+  description   String?
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  items         ProductItem[]
+  product       Product       @relation(fields: [productId], references: [id])
+  orders        Order[]
 }
 
 model ProductItem {
@@ -137,6 +145,15 @@ model Order {
   warrantyExpire   DateTime?
   couponCode       String?
   discountAmount   Float     @default(0)
+  
+  // Các field cho luồng dịch vụ
+  customPrice      Float?    // Giá chốt sau ghi mặc cả (allowBidding)
+  negotiatedDeliveryHours Int? // Thời gian thực hiện đã chốt sau thương lượng
+  startedAt        DateTime? // Bắt đầu tính thời gian làm (Sellers Accept)
+  deliveredAt      DateTime? // Đã báo cáo giao sản phẩm / nội dung
+  buyerConfirmedAt DateTime? // Khách ấn hoàn thành
+  pendingExtensionHours Int?    // Yêu cầu gia hạn thêm bao nhiêu giờ
+
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   dispute          Dispute?

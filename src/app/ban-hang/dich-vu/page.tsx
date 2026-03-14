@@ -1,0 +1,506 @@
+'use client';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import SellerLayout from '@/components/layout/SellerLayout';
+import {
+  Box, Typography, Paper, Tabs, Tab, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow, IconButton,
+  Button, Chip, Skeleton, Tooltip, TextField, InputAdornment,
+  Dialog, DialogTitle, DialogContent, DialogActions, Stack
+} from '@mui/material';
+import HandymanIcon from '@mui/icons-material/Handyman';
+import SearchIcon from '@mui/icons-material/Search';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import ChatIcon from '@mui/icons-material/Chat';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
+import QuickChatDialog from '@/components/chat/QuickChatDialog';
+
+interface Order {
+  id: string;
+  status: string;
+  amount: number;
+  customPrice: number | null;
+  negotiatedDeliveryHours: number | null;
+  pendingExtensionHours: number | null;
+  startedAt: string | null;
+  deliveredAt: string | null;
+  deliveredContent: string | null;
+  createdAt: string;
+  product: {
+    title: string;
+    thumbnail: string | null;
+    isService: boolean;
+    deliveryTimeHours: number | null;
+  };
+  variant: {
+    name: string;
+    price: number;
+    deliveryTimeHours: number | null;
+  } | null;
+  buyer: {
+    id: string;
+    username: string;
+    avatar: string | null;
+  } | null;
+}
+
+const STATUS_TABS = [
+  { label: 'Tất cả', value: 'all' },
+  { label: 'Thương lượng', value: 'NEGOTIATING' },
+  { label: 'Chờ xác nhận', value: 'PENDING_ACCEPTANCE' },
+  { label: 'Đang làm', value: 'IN_PROGRESS' },
+  { label: 'Đã bàn giao', value: 'DELIVERED' },
+  { label: 'Tạm giữ', value: 'HOLDING' },
+  { label: 'Hoàn thành', value: 'COMPLETED' },
+  { label: 'Khiếu nại', value: 'DISPUTED' },
+  { label: 'Đã hoàn tiền', value: 'REFUNDED' },
+];
+
+const CountdownTimer = ({ startedAt, durationHours }: { startedAt: string; durationHours: number }) => {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const start = new Date(startedAt).getTime();
+      const end = start + durationHours * 60 * 60 * 1000;
+      const now = new Date().getTime();
+      const diff = end - now;
+
+      if (diff <= 0) return 'Quá hạn';
+
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return `${h}h ${m}m ${s}s`;
+    };
+
+    const timer = setInterval(() => setTimeLeft(calculateTime()), 1000);
+    // Calculate once on mount
+    const initial = calculateTime();
+    setTimeLeft(initial);
+    return () => clearInterval(timer);
+  }, [startedAt, durationHours]);
+
+  const isLate = timeLeft === 'Quá hạn';
+
+  return (
+    <Typography variant="body2" sx={{ fontWeight: 700, color: isLate ? '#dc2626' : '#16a34a', fontFamily: 'monospace' }}>
+      {timeLeft}
+    </Typography>
+  );
+};
+
+export default function SellerServiceOrdersPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tabValue, setTabValue] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Quick Chat
+  const [chatOpen, setChatOpen] = useState(false);
+  const [targetChatUser, setTargetChatUser] = useState<any>(null);
+
+  const [bidPrice, setBidPrice] = useState('');
+  const [bidDeliveryHours, setBidDeliveryHours] = useState('');
+  const [bidLoading, setBidLoading] = useState(false);
+  const [deliveryContent, setDeliveryContent] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Extend Logic
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [extendHours, setExtendHours] = useState('24');
+  const [extendingOrder, setExtendingOrder] = useState<Order | null>(null);
+  const [extendLoading, setExtendLoading] = useState(false);
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const stored = localStorage.getItem('mmo_user');
+      const localUser = stored ? JSON.parse(stored) : null;
+      const uid = user?.id || localUser?.id;
+      if (!uid) return;
+
+      const res = await fetch(`/api/me/seller-orders?userId=${uid}&status=${tabValue}`);
+      const data = await res.json();
+      const allOrders = Array.isArray(data) ? data : [];
+      
+      // EXCLUSIVELY Service Orders in this page
+      const serviceOrders = allOrders.filter((o: any) => !!o.product?.isService);
+      setOrders(serviceOrders);
+
+      if (detailOpen && selectedOrder) {
+        const newest = serviceOrders.find((o: any) => o.id === selectedOrder.id);
+        if (newest) setSelectedOrder(newest);
+      }
+    } catch (err) {
+      console.error('Fetch service orders error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, tabValue, detailOpen, selectedOrder]);
+
+  const handleBid = async () => {
+    if (!selectedOrder || !bidPrice || !bidDeliveryHours) return;
+    setBidLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/bid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          sellerId: user?.id, 
+          price: bidPrice,
+          deliveryHours: bidDeliveryHours
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Đã gửi báo giá thành công!');
+        setBidPrice('');
+        setBidDeliveryHours('');
+        setDetailOpen(false);
+        fetchOrders();
+      } else toast.error(data.error);
+    } finally { setBidLoading(false); }
+  };
+
+  const handleAcceptService = async () => {
+    if (!selectedOrder) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/accept-service`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user?.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Đã xác nhận thực hiện đơn hàng!');
+        setDetailOpen(false);
+        fetchOrders();
+      } else toast.error(data.error);
+    } finally { setActionLoading(false); }
+  };
+
+  const handleDeliver = async () => {
+    if (!selectedOrder || !deliveryContent) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}/deliver`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user?.id, content: deliveryContent }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Đã bàn giao đơn hàng thành công!');
+        setDeliveryContent('');
+        setDetailOpen(false);
+        fetchOrders();
+      } else toast.error(data.error);
+    } finally { setActionLoading(false); }
+  };
+
+  const handleExtend = async () => {
+    if (!extendingOrder || !extendHours) return;
+    setExtendLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${extendingOrder.id}/extend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user?.id, hours: extendHours }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Đã gia hạn thêm ${extendHours} giờ!`);
+        setExtendOpen(false);
+        setDetailOpen(false);
+        fetchOrders();
+      } else toast.error(data.error);
+    } catch (err) {
+      toast.error('Lỗi kết nối');
+    } finally { setExtendLoading(false); }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      const stored = localStorage.getItem('mmo_user');
+      if (!stored) {
+        router.push('/dang-nhap');
+        return;
+      }
+    }
+    fetchOrders();
+  }, [user, tabValue, router, fetchOrders]);
+
+  const filteredOrders = orders.filter(o => 
+    o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    o.product?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    o.buyer?.username.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusChip = (status: string) => {
+    switch (status) {
+      case 'HOLDING': return <Chip label="Tạm giữ tiền" size="small" sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'COMPLETED': return <Chip label="Hoàn thành" size="small" sx={{ fontWeight: 600, bgcolor: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'DISPUTED': return <Chip label="Khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'NEGOTIATING': return <Chip label="Thương lượng" size="small" sx={{ fontWeight: 600, bgcolor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'PENDING_ACCEPTANCE': return <Chip label="Chờ bạn xác nhận" size="small" sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'IN_PROGRESS': return <Chip label="Đang thực hiện" size="small" sx={{ fontWeight: 600, bgcolor: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'DELIVERED': return <Chip label="Đã bàn giao" size="small" sx={{ fontWeight: 600, bgcolor: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0', fontSize: '0.7rem', borderRadius: 1 }} />;
+      default: return <Chip label={status} size="small" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />;
+    }
+  };
+
+  const handleViewDetail = (order: Order) => {
+    setSelectedOrder(order);
+    setBidPrice(String(order.customPrice || order.variant?.price || ''));
+    setBidDeliveryHours(String(order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product.deliveryTimeHours || ''));
+    setDetailOpen(true);
+  };
+
+  const isPendingExtension = selectedOrder?.pendingExtensionHours != null;
+
+  const handleOpenChat = (order: Order) => {
+    if (!order.buyer) {
+      toast.error('Không tìm thấy thông tin người mua');
+      return;
+    }
+    setTargetChatUser(order.buyer);
+    setChatOpen(true);
+  };
+
+  return (
+    <SellerLayout>
+      <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
+        <Box sx={{ bgcolor: '#7c3aed', p: 3.5, borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, textTransform: 'uppercase', letterSpacing: 0.5, color: 'white' }}>Quản lý Đơn Dịch Vụ</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block' }}>
+              Danh sách các đơn hàng dịch vụ bạn đang thực hiện cho khách hàng.
+            </Typography>
+          </Box>
+          <HandymanIcon sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 60 }} />
+        </Box>
+
+        <Paper elevation={0} sx={{ p: 0, borderRadius: '0 0 12px 12px', border: '1px solid #e2e8f0', borderTop: 'none', bgcolor: 'white', overflow: 'hidden' }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={(_, v) => setTabValue(v)}
+              sx={{
+                '& .MuiTab-root': { fontWeight: 700, fontSize: '0.85rem', minHeight: 60 },
+                '& .Mui-selected': { color: '#7c3aed !important' },
+                '& .MuiTabs-indicator': { bgcolor: '#7c3aed', height: 3 }
+              }}
+            >
+              {STATUS_TABS.map(tab => (
+                <Tab key={tab.value} label={tab.label} value={tab.value} />
+              ))}
+            </Tabs>
+          </Box>
+
+          <Box sx={{ p: 2 }}>
+            <TextField
+              fullWidth placeholder="Tìm theo Mã đơn, Tên dịch vụ hoặc Tên người mua..."
+              size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start"><SearchIcon sx={{ color: '#94a3b8' }} /></InputAdornment>
+                ),
+                sx: { borderRadius: 2 }
+              }}
+            />
+          </Box>
+
+          <TableContainer>
+            <Table>
+              <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>THAO TÁC</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>ĐƠN HÀNG</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>GIÁ</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>TRẠNG THÁI</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>THỜI GIAN CÒN LẠI</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>NGÀY ĐẶT</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  [1,2,3].map(i => <TableRow key={i}><TableCell colSpan={4}><Skeleton height={40} /></TableCell></TableRow>)
+                ) : filteredOrders.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} align="center" sx={{ py: 5 }}>Không tìm thấy đơn hàng nào.</TableCell></TableRow>
+                ) : (
+                  filteredOrders.map(order => (
+                    <TableRow key={order.id} hover>
+                      <TableCell sx={{ py: 1.5 }}>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Xem chi tiết & xử lý">
+                            <IconButton size="small" onClick={() => handleViewDetail(order)} sx={{ border: '1px solid #ddd6fe', color: '#7c3aed' }}>
+                              <VisibilityIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Chat với khách">
+                            <IconButton size="small" onClick={() => handleOpenChat(order)} sx={{ border: '1px solid #e2e8f0', color: '#3b82f6' }}>
+                              <ChatIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{order.product?.title}</Typography>
+                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>ID: {order.id.split('-')[0]}... · Khách: {order.buyer?.username}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#16a34a' }}>
+                          {order.amount > 0 ? `${order.amount.toLocaleString('vi-VN')}đ` : (order.customPrice ? `${order.customPrice.toLocaleString('vi-VN')}đ` : 'Chờ báo giá')}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{getStatusChip(order.status)}</TableCell>
+                      <TableCell>
+                        { (order.status === 'IN_PROGRESS' || order.status === 'DELIVERED') && order.startedAt ? (
+                          <CountdownTimer startedAt={order.startedAt} durationHours={order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product.deliveryTimeHours || 0} />
+                        ) : '---'}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ color: '#64748b' }}>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+
+        {/* Detail Dialog */}
+        <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+          {selectedOrder && (
+            <>
+              <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>Chi tiết Đơn Dịch Vụ</Typography>
+                {getStatusChip(selectedOrder.status)}
+              </DialogTitle>
+              <DialogContent dividers>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Dịch vụ</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedOrder.product?.title}</Typography>
+                  <Typography variant="body2" sx={{ color: '#64748b' }}>Khách hàng: <strong>@{selectedOrder.buyer?.username}</strong></Typography>
+                </Box>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Thanh toán</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 900, color: '#16a34a' }}>{selectedOrder.amount.toLocaleString('vi-VN')}đ</Typography>
+                </Box>
+
+                {selectedOrder.status === 'DELIVERED' && (
+                  <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b' }}>NỘI DUNG ĐÃ BÀN GIAO</Typography>
+                    <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>{selectedOrder.deliveredContent}</Typography>
+                  </Box>
+                )}
+              </DialogContent>
+              <DialogActions sx={{ p: 2, flexDirection: 'column', gap: 1 }}>
+                {selectedOrder?.status === 'NEGOTIATING' && (
+                  <Box sx={{ width: '100%', mb: 1, p: 2, bgcolor: '#fffbeb', borderRadius: 2, border: '1px solid #fef3c7' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, mb: 2, color: '#854d0e' }}>BÁO GIÁ CHO KHÁCH HÀNG</Typography>
+                    <Stack spacing={2} sx={{ mb: 2 }}>
+                      <TextField
+                        fullWidth size="small" label="Giá báo (VNĐ)"
+                        type="number"
+                        value={bidPrice}
+                        onChange={(e) => setBidPrice(e.target.value)}
+                        placeholder="VD: 500000"
+                        sx={{ bgcolor: 'white' }}
+                        InputProps={{ sx: { borderRadius: 1.5 } }}
+                      />
+                      <TextField
+                        fullWidth size="small" label="Thời gian thực hiện (giờ)"
+                        type="number"
+                        value={bidDeliveryHours}
+                        onChange={(e) => setBidDeliveryHours(e.target.value)}
+                        placeholder="VD: 48"
+                        sx={{ bgcolor: 'white' }}
+                        InputProps={{ 
+                          sx: { borderRadius: 1.5 },
+                          endAdornment: <InputAdornment position="end">giờ</InputAdornment>
+                        }}
+                      />
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, fontStyle: 'italic' }}>
+                      * Khách hàng sẽ thấy báo giá này và thời gian cam kết của bạn.
+                    </Typography>
+                    <Button 
+                      fullWidth variant="contained" color="warning" 
+                      onClick={handleBid} 
+                      disabled={bidLoading || !bidPrice || !bidDeliveryHours} 
+                      sx={{ fontWeight: 800, borderRadius: 1.5 }}
+                    >
+                      {bidLoading ? 'ĐANG GỬI...' : 'GỬI BÁO GIÁ'}
+                    </Button>
+                  </Box>
+                )}
+
+                {selectedOrder?.status === 'PENDING_ACCEPTANCE' && (
+                  <Button fullWidth variant="contained" color="primary" onClick={handleAcceptService} disabled={actionLoading} sx={{ fontWeight: 800, py: 1.5 }}>
+                    {actionLoading ? 'ĐANG XỬ LÝ...' : 'BẮT ĐẦU THỰC HIỆN'}
+                  </Button>
+                )}
+
+                {selectedOrder?.status === 'IN_PROGRESS' && (
+                  <Box sx={{ width: '100%', mb: 1, p: 2, bgcolor: '#f5f3ff', borderRadius: 2, border: '1px solid #ddd6fe' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, mb: 1.5, color: '#5b21b6' }}>BÀN GIAO SẢN PHẨM</Typography>
+                    <TextField
+                      fullWidth multiline rows={4} label="Nội dung/Link bàn giao"
+                      placeholder="Nhập tài liệu hoặc link bàn giao..."
+                      value={deliveryContent} onChange={(e) => setDeliveryContent(e.target.value)}
+                      sx={{ mb: 1.5, bgcolor: 'white' }}
+                    />
+                    <Button fullWidth variant="contained" color="secondary" onClick={handleDeliver} disabled={actionLoading || !deliveryContent} sx={{ fontWeight: 800, bgcolor: '#7c3aed' }}>
+                      {actionLoading ? 'ĐANG GỬI...' : 'XÁC NHẬN BÀN GIAO'}
+                    </Button>
+                  </Box>
+                )}
+                <Button fullWidth variant="outlined" onClick={() => setDetailOpen(false)} sx={{ fontWeight: 700, borderRadius: 2 }}>Đóng</Button>
+                {selectedOrder?.status === 'IN_PROGRESS' && !isPendingExtension && (
+                  <Button fullWidth variant="text" size="small" color="info" onClick={() => { setExtendingOrder(selectedOrder); setExtendOpen(true); }} sx={{ mt: 1, fontWeight: 700 }}>Gia hạn thời gian</Button>
+                )}
+                {isPendingExtension && (
+                  <Typography variant="caption" align="center" sx={{ color: '#0284c7', mt: 1, fontWeight: 700 }}>
+                    ⏳ Đang chờ khách đồng ý gia hạn thêm {selectedOrder?.pendingExtensionHours} giờ...
+                  </Typography>
+                )}
+              </DialogActions>
+            </>
+          )}
+        </Dialog>
+
+        <QuickChatDialog open={chatOpen} onClose={() => setChatOpen(false)} targetUser={targetChatUser} />
+
+        {/* Extend Dialog */}
+        <Dialog open={extendOpen} onClose={() => setExtendOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+          <DialogTitle sx={{ fontWeight: 800 }}>Gia hạn thực hiện</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" sx={{ mb: 2 }}>Bạn muốn gia hạn thêm bao nhiêu giờ cho đơn hàng này?</Typography>
+            <TextField
+              fullWidth type="number" label="Số giờ thêm" value={extendHours}
+              onChange={(e) => setExtendHours(e.target.value)}
+              InputProps={{ endAdornment: <InputAdornment position="end">giờ</InputAdornment> }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setExtendOpen(false)} color="inherit">Hủy</Button>
+            <Button variant="contained" onClick={handleExtend} disabled={extendLoading} sx={{ borderRadius: 2, fontWeight: 700, bgcolor: '#7c3aed' }}>
+              {extendLoading ? 'ĐANG LƯU...' : 'XÁC NHẬN'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </SellerLayout>
+  );
+}

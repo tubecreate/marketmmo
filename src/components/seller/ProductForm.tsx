@@ -3,10 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, MenuItem, Typography, Box,
-  CircularProgress, Alert, Divider, IconButton,
-  Chip, Stepper, Step, StepLabel, Paper,
-
+  CircularProgress, Alert, Switch, Divider, IconButton,
+  Chip, Stepper, Step, StepLabel, Paper, InputAdornment
 } from '@mui/material';
+import Image from 'next/image';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloseIcon from '@mui/icons-material/Close';
@@ -16,7 +16,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 
 interface Category { id: string; name: string; }
-interface Variant { id: string; name: string; price: string; description: string; }
+interface Variant { id: string; name: string; price: string; description: string; allowBidding: boolean; deliveryTimeHours: string; }
 
 interface ProductFormProps {
   open: boolean;
@@ -48,12 +48,14 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
     type: 'DIGITAL',
     warranty: '3',
     thumbnail: '',
+    isService: false,
+    autoDelivery: true,
   });
 
   const [uploading, setUploading] = useState(false);
 
   const [variants, setVariants] = useState<Variant[]>([
-    { id: '1', name: '', price: '', description: '' },
+    { id: '1', name: '', price: '', description: '', allowBidding: false, deliveryTimeHours: '' },
   ]);
 
 
@@ -83,6 +85,8 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           type: (product.type as string) || 'DIGITAL',
           warranty: String((product.warrantyDays as number) || 3),
           thumbnail: (product.thumbnail as string) || '',
+          isService: !!product.isService,
+          autoDelivery: !!product.autoDelivery,
         });
         if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
           setVariants((product.variants as any[]).map((v) => ({
@@ -90,19 +94,24 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
             name: v.name,
             price: String(v.price),
             description: v.description || '',
+            allowBidding: !!v.allowBidding,
+            deliveryTimeHours: v.deliveryTimeHours ? String(v.deliveryTimeHours) : '',
           })));
         } else {
-          setVariants([{ id: '1', name: '', price: '', description: '' }]);
+          setVariants([{ id: '1', name: '', price: '', description: '', allowBidding: false, deliveryTimeHours: '' }]);
         }
       } else {
-        setFormData({ title: '', shortDescription: '', description: '', categoryId: '', type: 'DIGITAL', warranty: '3', thumbnail: '' });
-        setVariants([{ id: '1', name: '', price: '', description: '' }]);
+        setFormData({ 
+          title: '', shortDescription: '', description: '', categoryId: '', type: 'DIGITAL', warranty: '3', thumbnail: '',
+          isService: false, autoDelivery: true
+        });
+        setVariants([{ id: '1', name: '', price: '', description: '', allowBidding: false, deliveryTimeHours: '' }]);
       }
     }
   }, [product, open, fetchCategories]);
 
   const addVariant = () => {
-    setVariants(prev => [...prev, { id: Date.now().toString(), name: '', price: '', description: '' }]);
+    setVariants(prev => [...prev, { id: Date.now().toString(), name: '', price: '', description: '', allowBidding: false, deliveryTimeHours: '' }]);
   };
 
   const removeVariant = (id: string) => {
@@ -110,7 +119,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
     setVariants(prev => prev.filter(v => v.id !== id));
   };
 
-  const updateVariant = (id: string, field: keyof Variant, value: string) => {
+  const updateVariant = (id: string, field: keyof Variant, value: any) => {
     setVariants(prev => prev.map(v => v.id === id ? { ...v, [field]: value } : v));
   };
 
@@ -145,8 +154,26 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
   };
 
   const canProceed = () => {
-    if (activeStep === 0) return formData.title.trim() && formData.categoryId;
-    if (activeStep === 1) return variants.every(v => v.name.trim() && v.price);
+    if (activeStep === 0) {
+      if (!formData.title.trim() || !formData.categoryId) return false;
+      // if (formData.isService) { // This check is no longer needed here as deliveryTimeHours is removed
+      //   if (!formData.deliveryTimeHours) return false;
+      //   // if not bidding, variants must have price
+      // }
+      return true;
+    }
+    if (activeStep === 1) {
+      return variants.every(v => {
+        if (!v.name.trim()) return false;
+        if (formData.isService) {
+          if (!v.allowBidding && !v.price) return false;
+          // deliveryTimeHours is optional but recommended
+        } else {
+          if (!v.price) return false;
+        }
+        return true;
+      });
+    }
     return true;
   };
 
@@ -248,7 +275,7 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                 onClick={() => document.getElementById('product-image-upload')?.click()}
               >
                 {formData.thumbnail ? (
-                  <img src={formData.thumbnail} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src={formData.thumbnail} alt="Preview" width={100} height={100} style={{ width: '100%', height: '100%', objectFit: 'cover' }} unoptimized />
                 ) : (
                   <>
                     {uploading ? <CircularProgress size={20} /> : <AddPhotoAlternateIcon sx={{ color: '#94a3b8', mb: 0.5 }} />}
@@ -279,7 +306,17 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               <TextField
                 select fullWidth label="Loại gian hàng *"
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    type: val, 
+                    isService: val === 'SERVICE',
+                    // reset service fields if switching back
+                    // allowBidding: val === 'SERVICE' ? formData.allowBidding : false, // allowBidding is now variant-level
+                    // deliveryTimeHours: val === 'SERVICE' ? formData.deliveryTimeHours : '' // Removed
+                  });
+                }}
                 InputProps={{ sx: { borderRadius: 2 } }}
               >
                 {PRODUCT_TYPES.map((opt) => (
@@ -299,6 +336,44 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                 )}
               </TextField>
             </Box>
+
+            {/* Service Toggle */}
+            <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Gian hàng dịch vụ</Typography>
+                  <Typography variant="caption" color="text.secondary">Nếu bật, sản phẩm này sẽ được phân loại là dịch vụ.</Typography>
+                </Box>
+                <Switch 
+                  checked={formData.isService}
+                  onChange={(e) => setFormData({ ...formData, isService: e.target.checked })}
+                  color="primary"
+                />
+              </Box>
+            </Box>
+
+            {formData.isService && (
+              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0f172a' }}>Cấu hình Dịch Vụ</Typography>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', p: 1.5, bgcolor: '#fff', borderRadius: 1.5, border: '1px solid #e2e8f0' }}>
+                  <input
+                    type="checkbox"
+                    id="auto-delivery"
+                    checked={formData.autoDelivery}
+                    onChange={(e) => setFormData({ ...formData, autoDelivery: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: '#3b82f6', marginRight: 12 }}
+                  />
+                  <label htmlFor="auto-delivery" style={{ cursor: 'pointer', flex: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>Giao hàng tự động</Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Nếu bật, hệ thống sẽ tự động giao hàng sau khi thanh toán thành công.
+                    </Typography>
+                  </label>
+                </Box>
+              </Box>
+            )}
+
             <TextField
               select fullWidth label="Bảo hành"
               value={formData.warranty}
@@ -322,7 +397,13 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
           <Box>
             <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: '#f0fdf4', borderColor: '#bbf7d0' }}>
               <Typography variant="body2" sx={{ color: '#15803d', fontSize: '0.85rem' }}>
-                💡 <strong>Sản phẩm</strong> cho phép bạn bán nhiều loại trong 1 gian hàng. Ví dụ: Gmail cổ 2009-2015 (49k), Gmail trung 2016-2020 (29k), Gmail mới (9k). Mỗi sản phẩm có kho riêng.
+                {formData.isService ? (
+                  <>💡 <strong>Các gói dịch vụ</strong> cho phép bạn tạo nhiều mức giá sẵn. 
+                  {/* {formData.allowBidding && " Vì bạn đã bật cho phép thương lượng, bạn có thể để trống giá nếu muốn báo giá tùy chỉnh 100%."} */}
+                  </>
+                ) : (
+                  <>💡 <strong>Sản phẩm</strong> cho phép bạn bán nhiều loại trong 1 gian hàng. Ví dụ: Gmail cổ 2009-2015 (49k), Gmail trung 2016-2020 (29k), Gmail mới (9k). Mỗi sản phẩm có kho riêng.</>
+                )}
               </Typography>
             </Paper>
             {variants.map((variant, idx) => (
@@ -345,14 +426,46 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                     InputProps={{ sx: { borderRadius: 2 } }}
                   />
                   <TextField
-                    size="small" label="Giá (VNĐ) *" type="number"
-                    placeholder="49000"
-                    value={variant.price}
+                    size="small" label={`Giá (VNĐ) ${variant.allowBidding ? '' : '*'}`} type="number"
+                    placeholder={variant.allowBidding ? "Thỏa thuận" : "49000"}
+                    value={variant.allowBidding && !variant.price ? '' : variant.price}
                     onChange={(e) => updateVariant(variant.id, 'price', e.target.value)}
                     sx={{ width: 140 }}
                     InputProps={{ sx: { borderRadius: 2 } }}
+                    disabled={variant.allowBidding && variants.length === 1 && !variant.name && !variant.price} 
                   />
                 </Box>
+
+                <Box sx={{ mb: 2, p: 1.5, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: variant.allowBidding && formData.isService ? 1.5 : 0 }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>Thỏa thuận giá</Typography>
+                      <Typography variant="caption" color="text.secondary">Khách sẽ không thanh toán ngay mà tạo đơn thương lượng.</Typography>
+                    </Box>
+                    <Switch 
+                      size="small"
+                      checked={variant.allowBidding}
+                      onChange={(e) => updateVariant(variant.id, 'allowBidding', e.target.checked)}
+                    />
+                  </Box>
+                  {variant.allowBidding && formData.isService && (
+                    <Box sx={{ pt: 1.5, borderTop: '1px solid #e2e8f0' }}>
+                       <TextField
+                        fullWidth size="small" label="Thời gian thực hiện mặc định (giờ)"
+                        type="number"
+                        value={variant.deliveryTimeHours}
+                        onChange={(e) => updateVariant(variant.id, 'deliveryTimeHours', e.target.value)}
+                        placeholder="VD: 24"
+                        InputProps={{ 
+                          sx: { borderRadius: 2 },
+                          endAdornment: <InputAdornment position="end">giờ</InputAdornment>
+                        }}
+                        helperText="Dùng làm mốc thời gian cơ sở khi thương lượng"
+                      />
+                    </Box>
+                  )}
+                </Box>
+
                 <TextField
                   fullWidth size="small" label="Mô tả sản phẩm (Không bắt buộc)"
                   placeholder="Thông tin thêm về sản phẩm này..."
@@ -380,8 +493,8 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>THÔNG TIN GIAN HÀNG</Typography>
               <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
                 {formData.thumbnail && (
-                  <Box sx={{ width: 100, height: 100, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
-                    <img src={formData.thumbnail} alt="Product" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Box sx={{ width: 100, height: 100, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider', flexShrink: 0, position: 'relative' }}>
+                    <Image src={formData.thumbnail} alt="Product" fill style={{ objectFit: 'cover' }} unoptimized />
                   </Box>
                 )}
                 <Box sx={{ display: 'grid', gap: 1, flex: 1 }}>
@@ -402,12 +515,24 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
               <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: '#64748b' }}>{variants.length} SẢN PHẨM</Typography>
               {variants.map((v, i) => (
                 <Box key={v.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.2, borderBottom: i < variants.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Sản phẩm {i + 1}: {v.name}</Typography>
-                    {v.description && <Typography variant="caption" color="text.secondary">{v.description}</Typography>}
+                  <Box sx={{ flex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>Sản phẩm {i + 1}: {v.name}</Typography>
+                      {v.allowBidding && (
+                        <Chip label="Thương lượng" size="small" color="warning" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800 }} />
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5 }}>
+                      {v.description && <Typography variant="caption" color="text.secondary">{v.description}</Typography>}
+                      {v.deliveryTimeHours && (
+                        <Typography variant="caption" sx={{ color: '#0369a1', fontWeight: 600 }}>⏱ {v.deliveryTimeHours}h</Typography>
+                      )}
+                    </Box>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>{parseInt(v.price).toLocaleString('vi-VN')}đ</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#dc2626' }}>
+                      {v.allowBidding && !v.price ? 'Thỏa thuận' : `${parseInt(v.price || '0').toLocaleString('vi-VN')}đ`}
+                    </Typography>
                     <Typography variant="caption" color="text.secondary">Nhập kho sau khi tạo</Typography>
                   </Box>
                 </Box>

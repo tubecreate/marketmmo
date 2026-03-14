@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Luồng Dịch Vụ - MarketMMO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+<div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg border border-gray-100">
+    <header class="flex justify-between items-center bg-blue-600 text-white p-4 rounded-lg mb-8 shadow">
+        <h1 class="text-2xl font-bold">🛒 Giao Dịch Dịch Vụ (Mockup)</h1>
+        <div class="flex gap-4 items-center">
+            <div class="text-sm bg-blue-800 px-3 py-1 rounded-full border border-blue-500">Số dư Người Mua: <span id="buyer-balance" class="font-bold text-green-300">500,000đ</span></div>
+            <div class="text-sm bg-blue-800 px-3 py-1 rounded-full border border-blue-500">Ví treo (Hold): <span id="escrow-balance" class="font-bold text-yellow-300">0đ</span></div>
+            <div class="text-sm bg-blue-800 px-3 py-1 rounded-full border border-blue-500">Số dư Người Bán: <span id="seller-balance" class="font-bold text-green-300">0đ</span></div>
+        </div>
+    </header>
+
+    <div class="flex gap-4 mb-6 border-b pb-4">
+        <button onclick="switchView('create-product')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-medium transition">1. Tạo SP Dịch Vụ</button>
+        <button onclick="switchView('buyer-view')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-medium transition">2. Người Mua Xem SP</button>
+        <button onclick="switchView('order-negotiating')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-medium transition">3. Báo Giá (Negotiating)</button>
+        <button onclick="switchView('order-in-progress')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-medium transition">4. Đang Làm (In Progress)</button>
+        <button onclick="switchView('order-delivered')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-medium transition">5. Hoàn Thành & Xác Nhận</button>
+    </div>
+
+    <!-- View 1: Create Product -->
+    <div id="create-product" class="view active space-y-4">
+        <h2 class="text-xl font-bold border-l-4 border-blue-500 pl-3">Người Bán: Đăng Sản Phẩm</h2>
+        <div class="grid grid-cols-2 gap-6 bg-gray-50 p-6 rounded-lg border">
+            <div>
+                <label class="block text-sm font-semibold mb-1">Tên Dịch Vụ</label>
+                <input type="text" value="Thiết kế Web Bán Hàng Trọn Gói" class="w-full border p-2 rounded bg-white" readonly>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1">Thời gian hoàn thành (Giờ)</label>
+                <input type="number" id="input-time" value="48" class="w-full border p-2 rounded font-mono text-blue-600 font-bold bg-white">
+            </div>
+            <div class="col-span-2 p-4 bg-yellow-50 rounded-lg border border-yellow-200 space-y-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked class="w-5 h-5 text-blue-600 rounded" disabled>
+                        <span class="font-medium">Đây là hàng dịch vụ (cần thời gian xử lý)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="allow-bid" checked class="w-5 h-5 text-blue-600 rounded" onchange="updateBidToggle()">
+                        <span class="font-medium">Cho phép người mua thương lượng / đặt hàng theo yêu cầu</span>
+                </label>
+                <p class="text-sm text-gray-500 ml-7">Nếu cho phép, người mua không cần trả tiền ngay mà sẽ tạo đơn để thỏa thuận giá trước.</p>
+                
+                <div id="fixed-price-input" class="ml-7 mt-3 hidden">
+                    <label class="block text-sm font-semibold mb-1">Giá Cố Định (VND)</label>
+                    <input type="number" value="200000" class="border p-2 rounded w-48">
+                </div>
+            </div>
+            <button onclick="switchView('buyer-view')" class="col-span-2 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">Đăng Nhận Làm Dịch Vụ</button>
+        </div>
+    </div>
+
+    <!-- View 2: Buyer View -->
+    <div id="buyer-view" class="view space-y-4">
+        <h2 class="text-xl font-bold border-l-4 border-blue-500 pl-3">Người Mua: Xem Chi Tiết</h2>
+        <div class="flex gap-6 items-start bg-white p-6 border rounded-lg shadow-sm">
+            <div class="w-1/3 h-48 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 font-bold">[Ảnh Dịch Vụ]</div>
+            <div class="w-2/3 space-y-3">
+                <div class="inline-block bg-indigo-100 text-indigo-700 font-semibold px-2 py-1 rounded text-xs mb-1">📦 Sản Phẩm Dịch Vụ</div>
+                <h3 class="text-2xl font-bold">Thiết kế Web Bán Hàng Trọn Gói</h3>
+                
+                <div class="flex gap-4 items-center bg-gray-50 p-3 rounded border">
+                    <div class="flex flex-col">
+                        <span class="text-sm text-gray-500">Giá</span>
+                        <span id="product-price-display" class="font-bold text-red-500 text-xl">Thỏa thuận</span>
+                    </div>
+                    <div class="w-px h-10 bg-gray-300"></div>
+                    <div class="flex flex-col">
+                        <span class="text-sm text-gray-500">Cam kết giao hàng trong</span>
+                        <span class="font-bold text-blue-600"><span id="display-time">48</span> Giờ</span>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button id="cta-button" onclick="buyerActionFlow()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg flex items-center gap-2 transition transform hover:scale-105">
+                        💬 Tạo Đơn Thương Lượng
+                    </button>
+                    <p class="text-xs text-gray-400 mt-2">Bạn chưa bị trừ tiền ở bước này. Người bán sẽ báo giá cho bạn.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View 3: Negotiating -->
+    <div id="order-negotiating" class="view space-y-4">
+        <h2 class="text-xl font-bold border-l-4 border-yellow-500 pl-3">Chi Tiết Đơn Hàng - Đang Thỏa Thuận Giá</h2>
+        
+        <div class="grid grid-cols-2 gap-6 bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-lg border border-yellow-200">
+            <!-- Nửa của Người Bán -->
+            <div class="bg-white p-4 rounded shadow-sm border">
+                <h3 class="font-bold text-blue-700 mb-2">👨‍💻 Giao diện Người Bán</h3>
+                <p class="text-sm text-gray-600 mb-4">Người mua yêu cầu thiết kế web. Hãy báo giá cho họ.</p>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="seller-bid-input" value="150000" class="border p-2 rounded w-full" placeholder="Nhập giá (VND)">
+                    <button onclick="submitBid()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded shrink-0">Báo giá</button>
+                </div>
+                <div id="seller-bid-status" class="mt-2 text-sm text-green-600 hidden">✅ Đã gửi báo giá 150,000đ. Chờ người mua thanh toán...</div>
+            </div>
+
+            <!-- Nửa của Người Mua -->
+            <div class="bg-white p-4 rounded shadow-sm border opacity-50 transition-opacity duration-500" id="buyer-accept-box">
+                <h3 class="font-bold text-purple-700 mb-2">👤 Giao diện Người Mua</h3>
+                <p class="text-sm text-gray-600 mb-4">Người bán đã báo giá. Nếu đồng ý, tiền sẽ bị đóng băng cho đến khi xong việc.</p>
+                
+                <div class="bg-gray-50 p-3 rounded border mb-3 flex justify-between items-center">
+                    <span>Giá chốt:</span>
+                    <span id="final-bid-price" class="font-bold text-red-500 text-lg">---</span>
+                </div>
+
+                <button onclick="acceptBid()" id="btn-accept-bid" class="w-full bg-green-600 text-white font-bold px-4 py-2 rounded opacity-50 cursor-not-allowed" disabled>
+                    Chốt Giá & Treo Tiền
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View 4: In Progress -->
+    <div id="order-in-progress" class="view space-y-4">
+        <h2 class="text-xl font-bold border-l-4 border-blue-500 pl-3">Chi Tiết Đơn Hàng - Đang Thực Hiện</h2>
+        
+        <div class="bg-blue-50 border border-blue-200 p-6 rounded-lg text-center shadow-sm">
+            <h3 class="text-lg font-bold text-blue-800 mb-2">⏳ Thời gian còn lại</h3>
+            <div class="text-4xl font-mono font-bold text-blue-600 bg-white inline-block px-6 py-3 rounded-lg shadow-inner mb-4">
+                47:59:58
+            </div>
+            <p class="text-sm text-gray-600 mb-6">Trạng thái: Người bán đang tiến hành công việc...</p>
+
+            <div class="bg-white p-6 rounded-lg border text-left max-w-lg mx-auto">
+                <h3 class="font-bold text-blue-700 mb-3 border-b pb-2">👨‍💻 Hành động của Người Bán</h3>
+                <label class="block text-sm font-semibold mb-1">Nội dung bàn giao (Link tải, thư mục code, v.v)</label>
+                <textarea class="w-full border p-3 rounded mb-3 bg-gray-50 focus:bg-white" rows="3" placeholder="Ví dụ: https://drive.google.com/..."></textarea>
+                <button onclick="deliverOrder()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition">🚀 Báo Hoàn Thành Nhiệm Vụ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View 5: Delivered & Confirmation -->
+    <div id="order-delivered" class="view space-y-4">
+        <h2 class="text-xl font-bold border-l-4 border-green-500 pl-3">Chi Tiết Đơn Hàng - Đã Giao Code/Dịch Vụ</h2>
+        
+        <div class="grid grid-cols-2 gap-6 bg-green-50 border border-green-200 p-6 rounded-lg">
+            <div class="col-span-2">
+                <div class="bg-green-100 text-green-800 p-4 rounded-lg flex items-center gap-3 border border-green-300">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h4 class="font-bold">Người bán đã bàn giao file!</h4>
+                        <p class="text-sm">Hãy kiểm tra sản phẩm. Nếu đúng yêu cầu, bấm xác nhận để tiền được chuyển cho người bán. Nếu không xử lý, tự động hoàn thành sau 3 ngày.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded shadow-sm border col-span-2">
+                <h3 class="font-bold text-purple-700 mb-3">👤 Hành động của Người Mua</h3>
+                
+                <div class="bg-gray-100 p-3 rounded mb-4 font-mono text-sm border">
+                    <div class="text-gray-500 text-xs mb-1">Lời nhắn bàn giao:</div>
+                    "Chào bạn, link tải source code và database ở đây: https://drive.google.com/xxx. Cảm ơn!"
+                </div>
+
+                <div class="flex gap-4">
+                    <button onclick="confirmCompletion()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition transform hover:-translate-y-1">
+                        🤝 Mọi thứ ổn - Xác nhận & Trả Tiền
+                    </button>
+                    <button class="flex-1 bg-red-100 text-red-600 hover:bg-red-200 border border-red-300 font-bold py-3 px-4 rounded-lg transition">
+                        ⛔ Báo Lỗi / Khiếu Nại
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let buyerBal = 500000;
+    let escrowBal = 0;
+    let sellerBal = 0;
+    let agreedPrice = 0;
+
+    function formatVND(amount) { return amount.toLocaleString('vi-VN') + 'đ'; }
+    function updateBalances() {
+        document.getElementById('buyer-balance').innerText = formatVND(buyerBal);
+        document.getElementById('escrow-balance').innerText = formatVND(escrowBal);
+        document.getElementById('seller-balance').innerText = formatVND(sellerBal);
+    }
+
+    function switchView(viewId) {
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+
+        // Update view 2 based on view 1
+        if (viewId === 'buyer-view') {
+            document.getElementById('display-time').innerText = document.getElementById('input-time').value;
+            const isBidding = document.getElementById('allow-bid').checked;
+            
+            if (isBidding) {
+                document.getElementById('product-price-display').innerText = "Thỏa thuận";
+                document.getElementById('product-price-display').className = "font-bold text-red-500 text-xl";
+                document.getElementById('cta-button').innerHTML = "💬 Tạo Đơn Thương Lượng";
+            } else {
+                agreedPrice = parseInt(document.querySelector('#fixed-price-input input').value);
+                document.getElementById('product-price-display').innerText = formatVND(agreedPrice);
+                document.getElementById('product-price-display').className = "font-bold text-blue-600 text-xl";
+                document.getElementById('cta-button').innerHTML = "💳 Mua Ngay (Treo Tiền)";
+            }
+        }
+    }
+
+    function updateBidToggle() {
+        const isBidding = document.getElementById('allow-bid').checked;
+        if (isBidding) {
+            document.getElementById('fixed-price-input').classList.add('hidden');
+        } else {
+            document.getElementById('fixed-price-input').classList.remove('hidden');
+        }
+    }
+
+    function buyerActionFlow() {
+        const isBidding = document.getElementById('allow-bid').checked;
+        if (isBidding) {
+            switchView('order-negotiating');
+        } else {
+            // Direct Pay Flow
+            if (buyerBal >= agreedPrice) {
+                buyerBal -= agreedPrice;
+                escrowBal += agreedPrice;
+                updateBalances();
+                alert('Bạn đã đặt hàng với chi phí ' + formatVND(agreedPrice) + '. Tiền đang được đóng băng (Treo) chờ xử lý.');
+                switchView('order-in-progress');
+            } else {
+                alert('Không đủ tiền!');
+            }
+        }
+    }
+
+    function submitBid() {
+        const inputPrice = document.getElementById('seller-bid-input').value;
+        if (!inputPrice) return;
+
+        agreedPrice = parseInt(inputPrice);
+        document.getElementById('final-bid-price').innerText = formatVND(agreedPrice);
+        document.getElementById('seller-bid-status').classList.remove('hidden');
+        document.getElementById('seller-bid-status').innerText = `✅ Đã gửi báo giá ${formatVND(agreedPrice)}. Chờ người mua thanh toán...`;
+        
+        // Active buyer side
+        document.getElementById('buyer-accept-box').classList.remove('opacity-50');
+        const btnAccept = document.getElementById('btn-accept-bid');
+        btnAccept.disabled = false;
+        btnAccept.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnAccept.classList.add('shadow-md', 'hover:bg-green-700');
+    }
+
+    function acceptBid() {
+        if (buyerBal >= agreedPrice) {
+            buyerBal -= agreedPrice;
+            escrowBal += agreedPrice;
+            updateBalances();
+            alert('Đã chốt giá và đóng băng tiền. Đang chuyển sang màn hình làm việc.');
+            switchView('order-in-progress');
+        } else {
+            alert('Không đủ tiền!');
+        }
+    }
+
+    function deliverOrder() {
+        switchView('order-delivered');
+    }
+
+    function confirmCompletion() {
+        sellerBal += escrowBal; // assuming no fee for demo
+        escrowBal = 0;
+        updateBalances();
+        alert('🎉 Giao dịch thành công! Tiền đã được cộng cho người bán.');
+        document.querySelector('#order-delivered').innerHTML = `
+            <div class="text-center py-10">
+                <h1 class="text-4xl">🎉</h1>
+                <h2 class="text-3xl font-bold text-green-600 mt-4">Giao dịch đã hoàn tất!</h2>
+                <p class="text-gray-500 mt-2">Cảm ơn bạn đã sử dụng nền tảng.</p>
+            </div>
+        `;
+    }
+
+    updateBidToggle();
+</script>
+</body>
+</html>

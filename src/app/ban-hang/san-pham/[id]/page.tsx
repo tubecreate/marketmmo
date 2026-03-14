@@ -22,7 +22,8 @@ interface Variant {
   id: string;
   name: string;
   price: number;
-  description?: string;
+  allowBidding: boolean;
+  description: string | null;
   _count?: {
     items: number;
   };
@@ -38,8 +39,10 @@ interface Product {
   thumbnail: string;
   warrantyDays: number;
   type: string;
+  isService: boolean;
+  allowBidding: boolean;
   variants: Variant[];
-  sellerId: string; // Added sellerId to Product interface
+  sellerId: string;
 }
 
 export default function ProductManagementPage() {
@@ -212,7 +215,9 @@ if (error || !product) return <SellerLayout><Box sx={{ p: 4 }}><Alert severity="
                     </TableCell>
                     <TableCell sx={{ fontWeight: 700, color: '#1e293b' }}>{v.name}</TableCell>
                     <TableCell>
-                      <Typography variant="caption" sx={{ color: '#15803d', fontWeight: 600 }}>Giá: {v.price.toLocaleString('vi-VN')}đ</Typography>
+                      <Typography variant="caption" sx={{ color: v.allowBidding ? '#ea580c' : '#15803d', fontWeight: 600 }}>
+                        {v.allowBidding ? 'Chế độ: Thương lượng' : `Giá: ${v.price.toLocaleString('vi-VN')}đ`}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip 
@@ -282,6 +287,7 @@ if (error || !product) return <SellerLayout><Box sx={{ p: 4 }}><Alert severity="
             onSuccess={fetchData}
             productId={product.id}
             variant={editingVariant}
+            isService={product.isService}
           />
         )}
       </Container>

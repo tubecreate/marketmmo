@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import slugify from 'slugify';
 
-interface VariantInput { id: string; name: string; price: string; description?: string; }
+interface VariantInput { id: string; name: string; price: string; description?: string; allowBidding: boolean; deliveryTimeHours: string | number; }
 
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { title, description, categoryId, type, sellerId, warrantyDays, variants } = data;
+    const { title, description, categoryId, type, sellerId, warrantyDays, variants, isService, allowBidding, deliveryTimeHours } = data;
 
     if (!title || !type || !sellerId) {
       return NextResponse.json({ error: 'Missing required fields: title, type, sellerId' }, { status: 400 });
@@ -39,7 +39,10 @@ export async function POST(req: Request) {
         sellerId,
         warrantyDays: warrantyDays ? parseInt(warrantyDays) : 3,
         status: 'PENDING',
-      },
+        isService: !!isService,
+        allowBidding: !!allowBidding || variantList.some(v => !!v.allowBidding),
+        deliveryTimeHours: deliveryTimeHours ? parseInt(String(deliveryTimeHours)) : (variantList[0]?.deliveryTimeHours ? parseInt(String(variantList[0].deliveryTimeHours)) : null),
+      } as any,
     });
 
     // 2. Create variants (if any)
@@ -50,10 +53,12 @@ export async function POST(req: Request) {
         data: {
           productId: product.id,
           name: v.name.trim(),
-          price: parseFloat(v.price),
+          price: parseFloat(v.price || '0'),
+          allowBidding: !!v.allowBidding,
+          deliveryTimeHours: v.deliveryTimeHours ? parseInt(String(v.deliveryTimeHours)) : null,
           description: v.description?.trim() || null,
           sortOrder: i,
-        },
+        } as any,
       });
     }
 

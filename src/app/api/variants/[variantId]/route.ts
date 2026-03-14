@@ -5,15 +5,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ variantId
   const { variantId } = await context.params;
   try {
     const data = await req.json();
-    const { name, price, description } = data;
+    const { name, price, allowBidding, deliveryTimeHours, description } = data;
 
     const updated = await prisma.productVariant.update({
       where: { id: variantId },
       data: {
         name,
         price: price ? parseFloat(price) : undefined,
+        allowBidding: allowBidding !== undefined ? !!allowBidding : undefined,
+        deliveryTimeHours: deliveryTimeHours !== undefined ? (deliveryTimeHours ? parseInt(deliveryTimeHours) : null) : undefined,
         description,
-      }
+      } as any
     });
 
     return NextResponse.json({ success: true, variant: updated });

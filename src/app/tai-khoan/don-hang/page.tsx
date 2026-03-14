@@ -9,6 +9,7 @@ import {
   Skeleton, Dialog, DialogTitle, DialogContent, DialogActions, Rating
 } from '@mui/material';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -30,6 +31,10 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
   REFUNDED:  { label: 'Đã hoàn tiền', color: '#7c3aed', bg: '#f5f3ff' },
   PRE_ORDER: { label: 'Đặt trước',  color: '#0284c7', bg: '#e0f2fe' },
   CANCELLED: { label: 'Đã huỷ',     color: '#94a3b8', bg: '#f1f5f9' },
+  NEGOTIATING: { label: 'Thương lượng', color: '#f59e0b', bg: '#fef3c7' },
+  PENDING_ACCEPTANCE: { label: 'Chờ NB xác nhận', color: '#0ea5e9', bg: '#e0f2fe' },
+  IN_PROGRESS: { label: 'Đang làm', color: '#7c3aed', bg: '#f5f3ff' },
+  DELIVERED: { label: 'Đã bàn giao', color: '#10b981', bg: '#dcfce7' },
 };
 
 interface Order {
@@ -41,14 +46,14 @@ interface Order {
   deliveredContent: string | null;
   warrantyExpire: Date | null;
   createdAt: Date;
-  variantName?: string | null;
-  product?: {
-    id: string;
-    title: string;
-    slug: string;
-    type: string;
-    thumbnail: string | null;
-  };
+  customPrice: number | null;
+  negotiatedDeliveryHours: number | null;
+  pendingExtensionHours: number | null;
+  startedAt: string | null;
+  deliveredAt: string | null;
+  variantName: string | null;
+  product: { id: string; title: string; thumbnail: string; isService: boolean; deliveryTimeHours: number | null };
+  variant: { id: string; name: string; price: number; deliveryTimeHours: number | null } | null;
   seller?: {
     id: string;
     username: string;
@@ -83,6 +88,7 @@ export default function OrdersPage() {
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancellingPreOrderId, setCancellingPreOrderId] = useState<string | null>(null);
+  const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
 
   // Review State
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
@@ -122,12 +128,33 @@ export default function OrdersPage() {
       .then(data => { setOrders(Array.isArray(data) ? data : []); setLoading(false); });
   }, [user?.id]);
 
-  const handleConfirm = useCallback(async (orderId: string) => {
+
+  const handleExtensionAction = async (orderId: string, action: 'APPROVE' | 'REJECT') => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}/approve-extension`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyerId: user.id, action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(action === 'APPROVE' ? 'Đã chấp nhận gia hạn' : 'Đã từ chối gia hạn');
+        fetchOrders();
+      } else toast.error(data.error);
+    } catch {
+      toast.error('Lỗi kết nối');
+    }
+  };
+
+  const handleConfirm = useCallback(async (orderId: string, isService = false) => {
     if (!user) return;
     setConfirmState({
       open: true,
-      title: 'Xác nhận nhận hàng',
-      message: 'Xác nhận bạn đã kiểm tra và nhận đủ tài khoản? Tiền sẽ được cộng cho người bán ngay lập tức!',
+      title: 'Xác nhận hoàn thành',
+      message: isService 
+        ? 'Xác nhận người bán đã hoàn thành yêu cầu và bàn giao nội dung cho bạn? Tiền sẽ được giải ngân cho người bán ngay lập tức!'
+        : 'Xác nhận bạn đã kiểm tra và nhận đủ tài khoản? Tiền sẽ được cộng cho người bán ngay lập tức!',
       variant: 'success',
       onConfirm: async () => {
         setConfirmState(prev => ({ ...prev, open: false }));
@@ -141,13 +168,45 @@ export default function OrdersPage() {
           const data = await res.json();
           if (!res.ok) toast.error(data.error || 'Lỗi');
           else {
-            toast.success('Xác nhận nhận hàng thành công!');
+            toast.success('Xác nhận thành công!');
             fetchOrders();
           }
         } catch {
           toast.error('Network error');
         } finally {
           setConfirmingId(null);
+        }
+      }
+    });
+  }, [user, fetchOrders]);
+
+  const handleAcceptBid = useCallback(async (orderId: string, price: number) => {
+    if (!user) return;
+    setConfirmState({
+      open: true,
+      title: 'Chấp nhận báo giá',
+      message: `Bạn đồng ý với báo giá ${price.toLocaleString('vi-VN')}đ từ người bán? Số tiền này sẽ được trừ từ số dư của bạn và tạm giữ an toàn bởi MarketMMO.`,
+      variant: 'info',
+      onConfirm: async () => {
+        setConfirmState(prev => ({ ...prev, open: false }));
+        setAcceptingBidId(orderId);
+        try {
+          const res = await fetch(`/api/orders/${orderId}/accept-bid`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buyerId: user.id }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success('Đã chấp nhận báo giá và thanh toán thành công!');
+            fetchOrders();
+          } else {
+            toast.error(data.error || 'Lỗi khi chấp nhận báo giá');
+          }
+        } catch {
+          toast.error('Lỗi kết nối');
+        } finally {
+          setAcceptingBidId(null);
         }
       }
     });
@@ -282,6 +341,10 @@ export default function OrdersPage() {
               <Select value={statusFilter} onChange={(e: { target: { value: string } }) => setStatusFilter(e.target.value)}>
                 <MenuItem value="all">Tất cả trạng thái</MenuItem>
                 <MenuItem value="PRE_ORDER">Đặt trước</MenuItem>
+                <MenuItem value="NEGOTIATING">Thương lượng</MenuItem>
+                <MenuItem value="PENDING_ACCEPTANCE">Chờ xác nhận</MenuItem>
+                <MenuItem value="IN_PROGRESS">Đang làm</MenuItem>
+                <MenuItem value="DELIVERED">Đã bàn giao</MenuItem>
                 <MenuItem value="HOLDING">Tạm giữ</MenuItem>
                 <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
                 <MenuItem value="DISPUTED">Khiếu nại</MenuItem>
@@ -339,13 +402,42 @@ export default function OrdersPage() {
                     <Box sx={{ textAlign: 'right' }}>
                       <Chip label={st.label} size="small" sx={{ bgcolor: st.bg, color: st.color, fontWeight: 700, fontSize: '0.72rem', mb: 0.5 }} />
                       <Typography variant="body2" sx={{ fontWeight: 700, color: '#16a34a', display: 'block' }}>
-                        {order.amount.toLocaleString('vi-VN')} VNĐ
+                        {order.amount > 0 
+                          ? `${order.amount.toLocaleString('vi-VN')} VNĐ` 
+                          : (order.customPrice ? `${order.customPrice.toLocaleString('vi-VN')} VNĐ` : 'Thỏa thuận')}
                       </Typography>
                     </Box>
                   </Box>
+
+                  {order.pendingExtensionHours && order.status === 'IN_PROGRESS' && (
+                    <Alert 
+                      severity="info" 
+                      variant="filled" 
+                      sx={{ mt: 2, borderRadius: 2, '& .MuiAlert-message': { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        📢 Người bán muốn gia hạn thực hiện thêm <b>{order.pendingExtensionHours} giờ</b>. Bạn đồng ý chứ?
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button size="small" variant="contained" color="primary" onClick={() => handleExtensionAction(order.id, 'APPROVE')} sx={{ fontWeight: 700, borderRadius: 1.5 }}>Đồng ý</Button>
+                        <Button size="small" variant="contained" color="inherit" onClick={() => handleExtensionAction(order.id, 'REJECT')} sx={{ fontWeight: 700, borderRadius: 1.5, color: '#000' }}>Từ chối</Button>
+                      </Box>
+                    </Alert>
+                  )}
                   
                   {/* Order Actions & Content Snippet */}
                   <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
+                      <Chip size="small" label={order.product?.isService ? 'DỊCH VỤ' : 'SẢN PHẨM SỐ'} color={order.product?.isService ? 'warning' : 'success'} sx={{ borderRadius: 1, fontSize: '0.65rem', fontWeight: 800 }} />
+                      {order.product?.isService && (
+                         <Chip 
+                           size="small" 
+                           icon={<AccessTimeIcon sx={{ fontSize: '14px !important' }} />} 
+                           label={`GIAO TRONG: ${order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product?.deliveryTimeHours || 'Thỏa thuận'} GIỜ`} 
+                           sx={{ borderRadius: 1, fontSize: '0.65rem', fontWeight: 800, bgcolor: '#e0f2fe', color: '#0369a1' }} 
+                         />
+                      )}
+                    </Box>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       {order.status === 'HOLDING' && (
                         <Button
@@ -446,6 +538,46 @@ export default function OrdersPage() {
                           </Button>
                         </Box>
                       )}
+
+                      {order.status === 'NEGOTIATING' && order.customPrice && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          disabled={acceptingBidId === order.id}
+                          onClick={() => handleAcceptBid(order.id, order.customPrice!)}
+                          sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700, bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' } }}
+                        >
+                          {acceptingBidId === order.id ? 'Đang xử lý...' : `Chấp nhận báo giá (${order.customPrice?.toLocaleString('vi-VN')}đ)`}
+                        </Button>
+                      )}
+
+                      {order.status === 'DELIVERED' && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          disabled={confirmingId === order.id}
+                          onClick={() => handleConfirm(order.id, true)}
+                          sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700 }}
+                        >
+                          {confirmingId === order.id ? 'Đang xử lý...' : 'Xác nhận hoàn thành'}
+                        </Button>
+                      )}
+
+                      {order.status === 'IN_PROGRESS' && order.startedAt && (
+                        <Typography variant="caption" sx={{ color: '#7c3aed', fontWeight: 700, bgcolor: '#f5f3ff', px: 1, py: 0.5, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <AccessTimeIcon sx={{ fontSize: 14 }} /> ĐANG LÀM
+                        </Typography>
+                      ) }
+
+                      <Button 
+                        size="small" variant="outlined" startIcon={<ForumIcon />}
+                        onClick={() => handleOpenChat(order.seller)}
+                        sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700 }}
+                      >
+                        Chat với người bán
+                      </Button>
                     </Box>
                     
                     {order.deliveredContent && (

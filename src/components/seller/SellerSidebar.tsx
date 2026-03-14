@@ -21,8 +21,8 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 const MENU_ITEMS = [
   { label: 'Tổng quan', icon: DashboardIcon, path: '/ban-hang/dashboard' },
   { label: 'Gian hàng', icon: InventoryIcon, path: '/ban-hang' },
-  { label: 'Đơn hàng', icon: ReceiptLongIcon, path: '/ban-hang/don-hang' },
-  { label: 'Đơn dịch vụ', icon: HandymanIcon, path: '/ban-hang/dich-vu' },
+  { label: 'Đơn hàng số', icon: ReceiptLongIcon, path: '/ban-hang/don-hang' },
+  { label: 'Đơn hàng dịch vụ', icon: HandymanIcon, path: '/ban-hang/dich-vu' },
   { label: 'Đặt trước', icon: HistoryIcon, path: '/ban-hang/dat-truoc' },
   { label: 'Rút tiền', icon: PaymentsIcon, path: '/ban-hang/rut-tien' },
   { label: 'Quỹ Bảo Hiểm', icon: GppGoodIcon, path: '/ban-hang/bao-hiem' },
