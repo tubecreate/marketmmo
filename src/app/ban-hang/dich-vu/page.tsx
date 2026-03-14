@@ -58,7 +58,18 @@ const STATUS_TABS = [
 ];
 
 const CountdownTimer = ({ startedAt, durationHours }: { startedAt: string; durationHours: number }) => {
-  const [timeLeft, setTimeLeft] = useState<string>('');
+  const calculateInitialTime = () => {
+    const start = new Date(startedAt).getTime();
+    const end = start + durationHours * 60 * 60 * 1000;
+    const now = new Date().getTime();
+    const diff = end - now;
+    if (diff <= 0) return 'Quá hạn';
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${h}h ${m}m ${s}s`;
+  };
+  const [timeLeft, setTimeLeft] = useState<string>(calculateInitialTime());
 
   useEffect(() => {
     const calculateTime = () => {
@@ -73,13 +84,14 @@ const CountdownTimer = ({ startedAt, durationHours }: { startedAt: string; durat
       const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const s = Math.floor((diff % (1000 * 60)) / 1000);
 
-      return `${h}h ${m}m ${s}s`;
+      const hStr = h < 10 ? `0${h}` : h;
+      const mStr = m < 10 ? `0${m}` : m;
+      const sStr = s < 10 ? `0${s}` : s;
+
+      return `${hStr}:${mStr}:${sStr}`;
     };
 
     const timer = setInterval(() => setTimeLeft(calculateTime()), 1000);
-    // Calculate once on mount
-    const initial = calculateTime();
-    setTimeLeft(initial);
     return () => clearInterval(timer);
   }, [startedAt, durationHours]);
 
@@ -118,8 +130,8 @@ export default function SellerServiceOrdersPage() {
   const [extendingOrder, setExtendingOrder] = useState<Order | null>(null);
   const [extendLoading, setExtendLoading] = useState(false);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const stored = localStorage.getItem('mmo_user');
       const localUser = stored ? JSON.parse(stored) : null;
@@ -131,7 +143,7 @@ export default function SellerServiceOrdersPage() {
       const allOrders = Array.isArray(data) ? data : [];
       
       // EXCLUSIVELY Service Orders in this page
-      const serviceOrders = allOrders.filter((o: any) => !!o.product?.isService);
+      const serviceOrders = allOrders.filter((o: any) => !!o.product?.isService && o.status !== 'PRE_ORDER');
       setOrders(serviceOrders);
 
       if (detailOpen && selectedOrder) {
@@ -141,9 +153,15 @@ export default function SellerServiceOrdersPage() {
     } catch (err) {
       console.error('Fetch service orders error:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [user, tabValue, detailOpen, selectedOrder]);
+  }, [user?.id, tabValue, detailOpen, selectedOrder]);
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(() => fetchOrders(true), 30000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
 
   const handleBid = async () => {
     if (!selectedOrder || !bidPrice || !bidDeliveryHours) return;
@@ -278,7 +296,7 @@ export default function SellerServiceOrdersPage() {
   return (
     <SellerLayout>
       <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
-        <Box sx={{ bgcolor: '#7c3aed', p: 3.5, borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ bgcolor: '#16a34a', p: 3.5, borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, textTransform: 'uppercase', letterSpacing: 0.5, color: 'white' }}>Quản lý Đơn Dịch Vụ</Typography>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block' }}>
@@ -295,8 +313,8 @@ export default function SellerServiceOrdersPage() {
               onChange={(_, v) => setTabValue(v)}
               sx={{
                 '& .MuiTab-root': { fontWeight: 700, fontSize: '0.85rem', minHeight: 60 },
-                '& .Mui-selected': { color: '#7c3aed !important' },
-                '& .MuiTabs-indicator': { bgcolor: '#7c3aed', height: 3 }
+                '& .Mui-selected': { color: '#16a34a !important' },
+                '& .MuiTabs-indicator': { bgcolor: '#16a34a', height: 3 }
               }}
             >
               {STATUS_TABS.map(tab => (
@@ -353,7 +371,12 @@ export default function SellerServiceOrdersPage() {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{order.product?.title}</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {order.status === 'PRE_ORDER' && (
+                            <Chip label="ĐẶT TRƯỚC" size="small" color="warning" sx={{ height: 16, fontSize: '0.55rem', fontWeight: 900, borderRadius: 0.5 }} />
+                          )}
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>{order.product?.title}</Typography>
+                        </Box>
                         <Typography variant="caption" sx={{ color: '#94a3b8' }}>ID: {order.id.split('-')[0]}... · Khách: {order.buyer?.username}</Typography>
                       </TableCell>
                       <TableCell>

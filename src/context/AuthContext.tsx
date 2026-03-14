@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const refreshUser = async () => {
+  const refreshUser = React.useCallback(async () => {
     const stored = localStorage.getItem('mmo_user');
     if (!stored) return;
     try {
@@ -67,11 +67,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/me?userId=${u.id}`);
       if (res.ok) {
         const fresh = await res.json();
-        setUser(fresh);
-        localStorage.setItem('mmo_user', JSON.stringify(fresh));
+        const currentStored = localStorage.getItem('mmo_user');
+        const currentParsed = currentStored ? JSON.parse(currentStored) : null;
+        
+        // Only update if data actually changed to avoid redundant re-renders
+        if (JSON.stringify(fresh) !== JSON.stringify(currentParsed)) {
+          setUser(fresh);
+          localStorage.setItem('mmo_user', JSON.stringify(fresh));
+        }
       }
     } catch (e) { console.error('Lỗi lấy info user mới:', e); }
-  };
+  }, []); // Empty deps because we check localStorage inside
 
   useEffect(() => {
     const stored = localStorage.getItem('mmo_user');
@@ -86,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Ignore JSON parse errors
       }
     }
-  }, []);
+  }, [refreshUser]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -110,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, 0);
       return () => clearTimeout(timeout);
     }
-  }, [user, refreshUnreadCount]);
+  }, [user, refreshUnreadCount, refreshUser]);
 
 
   const login = async (identifier: string, password: string) => {

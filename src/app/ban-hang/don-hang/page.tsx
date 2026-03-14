@@ -56,8 +56,8 @@ export default function SellerOrdersPage() {
     setDetailOpen(true);
   };
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const stored = localStorage.getItem('mmo_user');
       const localUser = stored ? JSON.parse(stored) : null;
@@ -76,9 +76,9 @@ export default function SellerOrdersPage() {
     } catch (err) {
       console.error('Fetch seller orders error:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [user, tabValue, detailOpen, selectedOrder]);
+  }, [user?.id, tabValue, detailOpen, selectedOrder]);
 
   const [bidPrice, setBidPrice] = useState('');
   const [deliveryContent, setDeliveryContent] = useState('');
@@ -142,6 +142,8 @@ export default function SellerOrdersPage() {
     const q = urlParams.get('q');
     if (q) setSearchTerm(q);
     fetchOrders();
+    const interval = setInterval(() => fetchOrders(true), 30000);
+    return () => clearInterval(interval);
   }, [fetchOrders]);
 
   const filteredOrders = orders.filter(o => {
@@ -151,7 +153,8 @@ export default function SellerOrdersPage() {
     
     // EXCLUSIVELY Digital Orders in this page
     const isProductService = !!o.product?.isService;
-    return matchSearch && !isProductService;
+    const isPreOrder = o.status === 'PRE_ORDER';
+    return matchSearch && !isProductService && !isPreOrder;
   });
 
   const getStatusChip = (status: string) => {
@@ -182,7 +185,7 @@ export default function SellerOrdersPage() {
           <Button
             variant="contained" disableElevation
             startIcon={<RefreshIcon />}
-            onClick={fetchOrders}
+            onClick={() => fetchOrders()}
             sx={{ borderRadius: 2, fontWeight: 900, px: 2, py: 1, bgcolor: 'white', color: '#16a34a', fontSize: '0.75rem', '&:hover': { bgcolor: '#f1f5f9' } }}
           >
             LÀM MỚI
@@ -313,6 +316,9 @@ export default function SellerOrdersPage() {
                           rel="noopener noreferrer"
                           sx={{ fontSize: '0.75rem', color: '#2563eb', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600, '&:hover': { color: '#1d4ed8' } }}
                         >
+                          {order.status === 'PRE_ORDER' && (
+                            <Chip label="ĐẶT TRƯỚC" size="small" color="warning" sx={{ height: 16, fontSize: '0.55rem', fontWeight: 900, mr: 0.5, borderRadius: 0.5 }} />
+                          )}
                           {order.product?.title}
                         </Typography>
                       </TableCell>
