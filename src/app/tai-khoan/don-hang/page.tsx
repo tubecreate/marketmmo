@@ -70,7 +70,7 @@ interface Order {
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -170,6 +170,7 @@ export default function OrdersPage() {
           else {
             toast.success('Xác nhận thành công!');
             fetchOrders();
+            refreshUser(); // Update balance immediately
           }
         } catch {
           toast.error('Network error');
@@ -178,7 +179,7 @@ export default function OrdersPage() {
         }
       }
     });
-  }, [user, fetchOrders]);
+  }, [user, fetchOrders, refreshUser]);
 
   const handleAcceptBid = useCallback(async (orderId: string, price: number) => {
     if (!user) return;
@@ -380,9 +381,20 @@ export default function OrdersPage() {
                 <Paper key={order.id} elevation={0} sx={{ p: 2.5, borderRadius: 2.5, border: '1px solid', borderColor: 'divider', '&:hover': { borderColor: '#16a34a' }, transition: 'border-color 0.2s' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
                     <Box sx={{ flex: 1 }}>
-                      <Typography variant="body1" sx={{ fontWeight: 700, mb: 0.5, color: '#1e293b' }}>
-                        {order.product?.title ?? 'Gian hàng'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                          {order.product?.title ?? 'Gian hàng'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
+                        </Typography>
+                        <Chip size="small" label={order.product?.isService ? 'DỊCH VỤ' : 'SẢN PHẨM SỐ'} color={order.product?.isService ? 'warning' : 'success'} sx={{ borderRadius: 1, fontSize: '0.6rem', fontWeight: 800, height: 20 }} />
+                        {order.product?.isService && (
+                           <Chip 
+                             size="small" 
+                             icon={<AccessTimeIcon sx={{ fontSize: '12px !important' }} />} 
+                             label={`GIAO TRONG: ${order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product?.deliveryTimeHours || 'Thỏa thuật'} GIỜ`} 
+                             sx={{ borderRadius: 1, fontSize: '0.6rem', fontWeight: 800, bgcolor: '#e0f2fe', color: '#0369a1', height: 20 }} 
+                           />
+                        )}
+                      </Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                         Mã đơn: #{order.id.slice(-8).toUpperCase()} · Người bán:{' '}
                         <Box component="span" 
@@ -427,18 +439,7 @@ export default function OrdersPage() {
                   
                   {/* Order Actions & Content Snippet */}
                   <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 1.5 }}>
-                      <Chip size="small" label={order.product?.isService ? 'DỊCH VỤ' : 'SẢN PHẨM SỐ'} color={order.product?.isService ? 'warning' : 'success'} sx={{ borderRadius: 1, fontSize: '0.65rem', fontWeight: 800 }} />
-                      {order.product?.isService && (
-                         <Chip 
-                           size="small" 
-                           icon={<AccessTimeIcon sx={{ fontSize: '14px !important' }} />} 
-                           label={`GIAO TRONG: ${order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product?.deliveryTimeHours || 'Thỏa thuận'} GIỜ`} 
-                           sx={{ borderRadius: 1, fontSize: '0.65rem', fontWeight: 800, bgcolor: '#e0f2fe', color: '#0369a1' }} 
-                         />
-                      )}
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                       {order.status === 'HOLDING' && (
                         <Button
                           size="small"

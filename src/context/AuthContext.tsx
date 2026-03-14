@@ -42,18 +42,6 @@ const AuthContext = createContext<AuthCtx>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('mmo_user');
-    if (stored) {
-      try { 
-        const parsed = JSON.parse(stored);
-        setTimeout(() => setUser(parsed), 0);
-      } catch { 
-        // Ignore JSON parse errors
-      }
-    }
-  }, []);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refreshUnreadCount = React.useCallback(async () => {
@@ -71,27 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (user) {
-      // First call after a tiny delay to avoid 'synchronous setState' lint
-      const timeout = setTimeout(() => {
-        refreshUnreadCount();
-      }, 0);
-      
-      interval = setInterval(refreshUnreadCount, 30000);
-      return () => {
-        clearTimeout(timeout);
-        clearInterval(interval);
-      };
-    } else {
-      const timeout = setTimeout(() => {
-        setUnreadCount(0);
-      }, 0);
-      return () => clearTimeout(timeout);
-    }
-  }, [user, refreshUnreadCount]);
-
   const refreshUser = async () => {
     const stored = localStorage.getItem('mmo_user');
     if (!stored) return;
@@ -105,6 +72,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) { console.error('Lỗi lấy info user mới:', e); }
   };
+
+  useEffect(() => {
+    const stored = localStorage.getItem('mmo_user');
+    if (stored) {
+      try { 
+        const parsed = JSON.parse(stored);
+        setTimeout(() => {
+          setUser(parsed);
+          refreshUser(); // Refresh on mount to get latest balance
+        }, 0);
+      } catch { 
+        // Ignore JSON parse errors
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (user) {
+      // First call after a tiny delay to avoid 'synchronous setState' lint
+      const timeout = setTimeout(() => {
+        refreshUnreadCount();
+      }, 0);
+      
+      interval = setInterval(() => {
+        refreshUnreadCount();
+        refreshUser(); // Also refresh user info periodically
+      }, 30000);
+      return () => {
+        clearTimeout(timeout);
+        clearInterval(interval);
+      };
+    } else {
+      const timeout = setTimeout(() => {
+        setUnreadCount(0);
+      }, 0);
+      return () => clearTimeout(timeout);
+    }
+  }, [user, refreshUnreadCount]);
+
 
   const login = async (identifier: string, password: string) => {
     const trimmedIdentifier = identifier.trim();
