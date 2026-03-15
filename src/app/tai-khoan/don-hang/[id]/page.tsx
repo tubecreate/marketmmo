@@ -169,22 +169,39 @@ export default function BuyerOrderDetailPage() {
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>{order.product.title}</Typography>
                   <Typography variant="body2" sx={{ color: '#64748b', mb: 1.5 }}>
-                    Mã đơn: <strong style={{ color: '#1e293b' }}>#{order.id.toUpperCase()}</strong>
+                    Mã đơn: <strong style={{ color: '#1e293b' }}>#{order.id.slice(0, 10).toUpperCase()}</strong>
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Typography variant="h5" sx={{ fontWeight: 900, color: '#ff0000' }}>
-                      {order.amount.toLocaleString('vi-VN')} VNĐ
+                    <Typography variant="h5" sx={{ fontWeight: 900, color: order.status === 'NEGOTIATING' && order.customPrice ? '#f59e0b' : '#ff0000' }}>
+                      {((order.status === 'NEGOTIATING' && order.customPrice) ? order.customPrice : order.amount).toLocaleString('vi-VN')} VNĐ
                     </Typography>
-                    <Chip 
-                      label={statusMap[order.status]?.label || order.status} 
-                      size="small" 
-                      sx={{ 
-                        fontWeight: 800, 
-                        bgcolor: statusMap[order.status]?.bg || '#f1f5f9', 
-                        color: statusMap[order.status]?.color || '#64748b', 
-                        borderRadius: 1 
-                      }} 
-                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Chip 
+                          label={
+                            order.status === 'NEGOTIATING' 
+                              ? (order.customPrice ? 'Đã báo giá' : 'Chờ báo giá')
+                              : (statusMap[order.status]?.label || order.status)
+                          } 
+                          size="small" 
+                          sx={{ 
+                            fontWeight: 800, 
+                            bgcolor: order.status === 'NEGOTIATING' && !order.customPrice ? '#fffbeb' : (statusMap[order.status]?.bg || '#f1f5f9'), 
+                            color: order.status === 'NEGOTIATING' && !order.customPrice ? '#d97706' : (statusMap[order.status]?.color || '#64748b'), 
+                            borderRadius: 1,
+                            border: order.status === 'NEGOTIATING' && !order.customPrice ? '1px solid #fef3c7' : 'none'
+                          }} 
+                        />
+                        {order.status === 'NEGOTIATING' && order.customPrice && (
+                          <Chip label="Giá dự kiến" size="small" variant="outlined" sx={{ fontWeight: 700, borderColor: '#f59e0b', color: '#f59e0b', height: 20, fontSize: '0.65rem' }} />
+                        )}
+                      </Box>
+                      {order.status === 'PRE_ORDER' && (
+                        <Typography variant="caption" sx={{ color: '#0284c7', fontWeight: 600 }}>
+                          * Chờ người bán nhập hàng
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
                 </Box>
               </Box>
@@ -280,7 +297,7 @@ export default function BuyerOrderDetailPage() {
                 <Stack spacing={2}>
                   <Box>
                     <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>MÃ ĐƠN HÀNG</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>#{order.id.toUpperCase()}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>#{order.id.slice(0, 10).toUpperCase()}</Typography>
                   </Box>
                   
                   <Box>
@@ -291,15 +308,30 @@ export default function BuyerOrderDetailPage() {
                   <Box>
                     <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>TRẠNG THÁI</Typography>
                     <Chip 
-                      label={statusMap[order.status]?.label || order.status} 
+                      label={
+                        order.status === 'NEGOTIATING' 
+                          ? (order.customPrice ? 'Đã báo giá' : 'Chờ báo giá')
+                          : (statusMap[order.status]?.label || order.status)
+                      } 
                       size="small" 
                       sx={{ 
                         fontWeight: 800, 
-                        bgcolor: statusMap[order.status]?.bg || '#f1f5f9', 
-                        color: statusMap[order.status]?.color || '#64748b', 
-                        mt: 0.5 
+                        bgcolor: order.status === 'NEGOTIATING' && !order.customPrice ? '#fffbeb' : (statusMap[order.status]?.bg || '#f1f5f9'), 
+                        color: order.status === 'NEGOTIATING' && !order.customPrice ? '#d97706' : (statusMap[order.status]?.color || '#64748b'), 
+                        mt: 0.5,
+                        border: order.status === 'NEGOTIATING' && !order.customPrice ? '1px solid #fef3c7' : 'none'
                       }} 
                     />
+                    {order.status === 'PRE_ORDER' && (
+                      <Typography variant="caption" sx={{ color: '#0284c7', fontWeight: 600, display: 'block', mt: 0.5 }}>
+                        Chờ người bán nhập hàng
+                      </Typography>
+                    )}
+                    {order.status === 'NEGOTIATING' && order.customPrice && (
+                      <Typography variant="caption" sx={{ color: '#d97706', fontWeight: 600, display: 'block', mt: 0.5 }}>
+                        Chờ bạn xác nhận báo giá
+                      </Typography>
+                    )}
                   </Box>
 
                   <Divider sx={{ my: 1 }} />

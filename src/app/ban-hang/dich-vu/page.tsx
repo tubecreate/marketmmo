@@ -49,7 +49,7 @@ interface Order {
 
 const STATUS_TABS = [
   { label: 'Tất cả', value: 'all' },
-  { label: 'Thương lượng', value: 'NEGOTIATING' },
+  { label: 'Chờ/Đã báo giá', value: 'NEGOTIATING' },
   { label: 'Chờ xác nhận', value: 'PENDING_ACCEPTANCE' },
   { label: 'Đang làm', value: 'IN_PROGRESS' },
   { label: 'Đã bàn giao', value: 'DELIVERED' },
@@ -343,16 +343,29 @@ export default function SellerServiceOrdersPage() {
     o.buyer?.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusChip = (status: string) => {
-    switch (status) {
+  const getStatusChip = (order: Order) => {
+    switch (order.status) {
       case 'HOLDING': return <Chip label="Tạm giữ tiền" size="small" sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'COMPLETED': return <Chip label="Hoàn thành" size="small" sx={{ fontWeight: 600, bgcolor: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'DISPUTED': return <Chip label="Khiếu nại" size="small" sx={{ fontWeight: 600, bgcolor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', fontSize: '0.7rem', borderRadius: 1 }} />;
-      case 'NEGOTIATING': return <Chip label="Thương lượng" size="small" sx={{ fontWeight: 600, bgcolor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a', fontSize: '0.7rem', borderRadius: 1 }} />;
+      case 'NEGOTIATING': 
+        const isWaiting = !order.customPrice;
+        return <Chip 
+          label={isWaiting ? "Chờ báo giá" : "Đã báo giá"} 
+          size="small" 
+          sx={{ 
+            fontWeight: 600, 
+            bgcolor: isWaiting ? '#fffbeb' : '#fef3c7', 
+            color: '#d97706', 
+            border: isWaiting ? '1px solid #fde68a' : '1px solid #fde68a', 
+            fontSize: '0.7rem', 
+            borderRadius: 1 
+          }} 
+        />;
       case 'PENDING_ACCEPTANCE': return <Chip label="Chờ bạn xác nhận" size="small" sx={{ fontWeight: 600, bgcolor: '#e0f2fe', color: '#0284c7', border: '1px solid #bae6fd', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'IN_PROGRESS': return <Chip label="Đang thực hiện" size="small" sx={{ fontWeight: 600, bgcolor: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', fontSize: '0.7rem', borderRadius: 1 }} />;
       case 'DELIVERED': return <Chip label="Đã bàn giao" size="small" sx={{ fontWeight: 600, bgcolor: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0', fontSize: '0.7rem', borderRadius: 1 }} />;
-      default: return <Chip label={status} size="small" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />;
+      default: return <Chip label={order.status} size="small" sx={{ fontWeight: 600, fontSize: '0.7rem' }} />;
     }
   };
 
@@ -444,14 +457,14 @@ export default function SellerServiceOrdersPage() {
                           )}
                           <Typography variant="body2" sx={{ fontWeight: 700 }}>{order.product?.title}</Typography>
                         </Box>
-                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>ID: {order.id.toUpperCase()} · Khách: {order.buyer?.username}</Typography>
+                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>ID: {order.id.slice(0, 10).toUpperCase()} · Khách: {order.buyer?.username}</Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 800, color: '#16a34a' }}>
-                          {order.amount > 0 ? `${order.amount.toLocaleString('vi-VN')}đ` : (order.customPrice ? `${order.customPrice.toLocaleString('vi-VN')}đ` : 'Chờ báo giá')}
+                          {order.amount > 0 ? `${order.amount.toLocaleString('vi-VN')}đ` : (order.customPrice ? `${order.customPrice.toLocaleString('vi-VN')}đ` : 'Thỏa thuận')}
                         </Typography>
                       </TableCell>
-                      <TableCell>{getStatusChip(order.status)}</TableCell>
+                      <TableCell>{getStatusChip(order)}</TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           { (order.status === 'IN_PROGRESS' || order.status === 'DELIVERED') && order.startedAt ? (
@@ -566,7 +579,7 @@ export default function SellerServiceOrdersPage() {
             <>
               <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>Chi tiết Đơn Dịch Vụ</Typography>
-                {getStatusChip(selectedOrder.status)}
+                {getStatusChip(selectedOrder)}
               </DialogTitle>
               <DialogContent dividers>
                 <Box sx={{ mb: 3 }}>
@@ -581,7 +594,7 @@ export default function SellerServiceOrdersPage() {
                     <Typography variant="h5" sx={{ fontWeight: 900, color: '#16a34a' }}>
                       {selectedOrder.amount > 0 
                         ? `${selectedOrder.amount.toLocaleString('vi-VN')}đ` 
-                        : (selectedOrder.customPrice ? `${selectedOrder.customPrice.toLocaleString('vi-VN')}đ` : 'Chờ báo giá')}
+                        : (selectedOrder.customPrice ? `${selectedOrder.customPrice.toLocaleString('vi-VN')}đ` : 'Thỏa thuận')}
                     </Typography>
                   </Box>
                   <Box>

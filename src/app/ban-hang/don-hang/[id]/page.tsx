@@ -145,9 +145,10 @@ export default function SellerOrderDetailPage() {
   if (loading) return <SellerLayout><Box sx={{ p: 4 }}><Skeleton variant="rectangular" height={400} /></Box></SellerLayout>;
   if (!order) return null;
 
-  const totalRevenue = order.amount;
-  const platformFee = order.fee;
-  const netRevenue = totalRevenue - platformFee;
+  const isNegotiatingBid = order.status === 'NEGOTIATING' && order.customPrice !== null;
+  const totalRevenue = isNegotiatingBid ? (order.customPrice as number) : order.amount;
+  const platformFee = isNegotiatingBid ? ((order.customPrice as number) * 0.1) : order.fee; 
+  const netRevenue = (totalRevenue || 0) - (platformFee || 0);
 
   return (
     <SellerLayout>
@@ -204,22 +205,39 @@ export default function SellerOrderDetailPage() {
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>{order.product.title}</Typography>
                   <Typography variant="body2" sx={{ color: '#64748b', mb: 1.5 }}>
-                    Mã đơn: <strong style={{ color: '#1e293b' }}>#{order.id.toUpperCase()}</strong>
+                    Mã đơn: <strong style={{ color: '#1e293b' }}>#{order.id.slice(0, 10).toUpperCase()}</strong>
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Typography variant="h5" sx={{ fontWeight: 900, color: '#ff0000' }}>
-                      {order.amount.toLocaleString('vi-VN')} VNĐ
+                    <Typography variant="h5" sx={{ fontWeight: 900, color: order.status === 'NEGOTIATING' && order.customPrice ? '#f59e0b' : '#ff0000' }}>
+                      {((order.status === 'NEGOTIATING' && order.customPrice) ? order.customPrice : order.amount).toLocaleString('vi-VN')} VNĐ
                     </Typography>
-                    <Chip 
-                      label={statusMap[order.status]?.label || order.status} 
-                      size="small" 
-                      sx={{ 
-                        fontWeight: 800, 
-                        bgcolor: statusMap[order.status]?.bg || '#f1f5f9', 
-                        color: statusMap[order.status]?.color || '#64748b', 
-                        borderRadius: 1 
-                      }} 
-                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Chip 
+                          label={
+                            order.status === 'NEGOTIATING' 
+                              ? (order.customPrice ? 'Đã báo giá' : 'Chờ báo giá')
+                              : (statusMap[order.status]?.label || order.status)
+                          } 
+                          size="small" 
+                          sx={{ 
+                            fontWeight: 800, 
+                            bgcolor: order.status === 'NEGOTIATING' && !order.customPrice ? '#fffbeb' : (statusMap[order.status]?.bg || '#f1f5f9'), 
+                            color: order.status === 'NEGOTIATING' && !order.customPrice ? '#d97706' : (statusMap[order.status]?.color || '#64748b'), 
+                            borderRadius: 1,
+                            border: order.status === 'NEGOTIATING' && !order.customPrice ? '1px solid #fef3c7' : 'none'
+                          }} 
+                        />
+                        {order.status === 'NEGOTIATING' && order.customPrice && (
+                          <Chip label="Giá dự kiến" size="small" variant="outlined" sx={{ fontWeight: 700, borderColor: '#f59e0b', color: '#f59e0b', height: 20, fontSize: '0.65rem' }} />
+                        )}
+                      </Box>
+                      {order.status === 'PRE_ORDER' && (
+                        <Typography variant="caption" sx={{ color: '#0284c7', fontWeight: 600 }}>
+                          * Chờ người bán nhập hàng
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
                 </Box>
               </Box>
@@ -244,7 +262,7 @@ export default function SellerOrderDetailPage() {
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: '#64748b' }}>THANH TOÁN</Typography>
                   <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">Doanh thu đơn hàng:</Typography>
+                      <Typography variant="body2">{isNegotiatingBid ? 'Giá đề xuất:' : 'Doanh thu đơn hàng:'}</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 700 }}>{totalRevenue.toLocaleString('vi-VN')}đ</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -253,7 +271,7 @@ export default function SellerOrderDetailPage() {
                     </Box>
                     <Divider sx={{ my: 1.5 }} />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Thực nhận:</Typography>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{isNegotiatingBid ? 'Dự kiến thực nhận:' : 'Thực nhận:'}</Typography>
                       <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#16a34a' }}>{netRevenue.toLocaleString('vi-VN')}đ</Typography>
                     </Box>
                   </Box>
@@ -275,58 +293,6 @@ export default function SellerOrderDetailPage() {
                   </Box>
                 </Box>
 
-                {order.status === 'NEGOTIATING' && (
-                  <Box sx={{ pt: 2 }}>
-                    {!order.customPrice ? (
-                      <>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#f59e0b' }}>BÁO GIÁ DỊCH VỤ</Typography>
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                          <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField 
-                              fullWidth size="small" type="number"
-                              label="Số tiền (VNĐ)"
-                              placeholder="Ví dụ: 50000"
-                              value={bidPrice}
-                              onChange={(e) => setBidPrice(e.target.value)}
-                            />
-                          </Grid>
-                          <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField 
-                              fullWidth size="small" type="number"
-                              label="Thời gian làm (Giờ)"
-                              placeholder="Ví dụ: 24"
-                              value={bidHours}
-                              onChange={(e) => setBidHours(e.target.value)}
-                            />
-                          </Grid>
-                        </Grid>
-                        <Button 
-                          fullWidth variant="contained" 
-                          onClick={handleBid}
-                          disabled={actionLoading || !bidPrice}
-                          sx={{ py: 1.5, fontWeight: 800, bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' } }}
-                        >
-                          GỬI BÁO GIÁ CHO KHÁCH
-                        </Button>
-                      </>
-                    ) : (
-                      <Box sx={{ p: 2, bgcolor: '#fffbeb', border: '1px solid #fef3c7', borderRadius: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: '#d97706' }}>ĐÃ GỬI BÁO GIÁ</Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                          <Typography variant="body2">Giá đề xuất:</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#ff0000' }}>{order.customPrice.toLocaleString('vi-VN')}đ</Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="body2">Thời gian làm:</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 800 }}>{order.negotiatedDeliveryHours || 24} giờ</Typography>
-                        </Box>
-                        <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: '#92400e', fontStyle: 'italic' }}>
-                          Đang chờ khách hàng chấp nhận báo giá...
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                )}
 
                 {order.status === 'IN_PROGRESS' && (
                   <Box sx={{ pt: 2 }}>
@@ -372,7 +338,7 @@ export default function SellerOrderDetailPage() {
                 <Stack spacing={2}>
                   <Box>
                     <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>MÃ ĐƠN HÀNG</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>#{order.id.toUpperCase()}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>#{order.id.slice(0, 10).toUpperCase()}</Typography>
                   </Box>
                   
                   <Box>
@@ -383,21 +349,36 @@ export default function SellerOrderDetailPage() {
                   <Box>
                     <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>TRẠNG THÁI</Typography>
                     <Chip 
-                      label={statusMap[order.status]?.label || order.status} 
+                      label={
+                        order.status === 'NEGOTIATING' 
+                          ? (order.customPrice ? 'Đã báo giá' : 'Chờ báo giá')
+                          : (statusMap[order.status]?.label || order.status)
+                      } 
                       size="small" 
                       sx={{ 
                         fontWeight: 800, 
-                        bgcolor: statusMap[order.status]?.bg || '#f1f5f9', 
-                        color: statusMap[order.status]?.color || '#64748b', 
-                        mt: 0.5 
+                        bgcolor: order.status === 'NEGOTIATING' && !order.customPrice ? '#fffbeb' : (statusMap[order.status]?.bg || '#f1f5f9'), 
+                        color: order.status === 'NEGOTIATING' && !order.customPrice ? '#d97706' : (statusMap[order.status]?.color || '#64748b'), 
+                        mt: 0.5,
+                        border: order.status === 'NEGOTIATING' && !order.customPrice ? '1px solid #fef3c7' : 'none'
                       }} 
                     />
+                    {order.status === 'PRE_ORDER' && (
+                      <Typography variant="caption" sx={{ color: '#0284c7', fontWeight: 600, display: 'block', mt: 0.5 }}>
+                        Chờ người bán nhập hàng
+                      </Typography>
+                    )}
+                    {order.status === 'NEGOTIATING' && order.customPrice && (
+                      <Typography variant="caption" sx={{ color: '#d97706', fontWeight: 600, display: 'block', mt: 0.5 }}>
+                        Chờ người mua xác nhận
+                      </Typography>
+                    )}
                   </Box>
 
                   <Divider sx={{ my: 1 }} />
 
                   <Box>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>DOANH THU</Typography>
+                    <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>{isNegotiatingBid ? 'REVENUE DỰ KIẾN' : 'DOANH THU'}</Typography>
                     <Typography variant="h5" sx={{ fontWeight: 900, color: '#16a34a' }}>{netRevenue.toLocaleString('vi-VN')} VNĐ</Typography>
                   </Box>
 
@@ -409,6 +390,52 @@ export default function SellerOrderDetailPage() {
                   >
                     CHAT VỚI KHÁCH HÀNG
                   </Button>
+
+                  {order.status === 'NEGOTIATING' && (
+                    <Box sx={{ pt: 2 }}>
+                      {!order.customPrice ? (
+                        <Paper elevation={0} sx={{ p: 2, border: '1px solid #f59e0b', bgcolor: '#fffbeb', borderRadius: 2 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#f59e0b' }}>BÁO GIÁ DỊCH VỤ</Typography>
+                          <Stack spacing={2}>
+                            <TextField 
+                              fullWidth size="small" type="number"
+                              label="Số tiền (VNĐ)"
+                              placeholder="Ví dụ: 50000"
+                              value={bidPrice}
+                              onChange={(e) => setBidPrice(e.target.value)}
+                            />
+                            <TextField 
+                              fullWidth size="small" type="number"
+                              label="Thời gian làm (Giờ)"
+                              placeholder="Ví dụ: 24"
+                              value={bidHours}
+                              onChange={(e) => setBidHours(e.target.value)}
+                            />
+                            <Button 
+                              fullWidth variant="contained" 
+                              onClick={handleBid}
+                              disabled={actionLoading || !bidPrice}
+                              sx={{ py: 1.2, fontWeight: 800, bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' } }}
+                            >
+                              GỬI BÁO GIÁ
+                            </Button>
+                          </Stack>
+                        </Paper>
+                      ) : (
+                        <Box sx={{ p: 2, bgcolor: '#fffbeb', border: '1px solid #fef3c7', borderRadius: 2 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: '#d97706' }}>ĐÃ GỬI BÁO GIÁ</Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2">Giá đề xuất:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#ff0000' }}>{order.customPrice.toLocaleString('vi-VN')}đ</Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="body2">Thời gian làm:</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 800 }}>{order.negotiatedDeliveryHours || 24} giờ</Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
                 </Stack>
               </Paper>
 

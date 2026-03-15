@@ -460,7 +460,7 @@ export default function OrdersPage() {
                           onClick={() => router.push(`/tai-khoan/don-hang/${order.id}`)}
                           sx={{ fontWeight: 700, color: '#16a34a', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                         >
-                          #{order.id.toUpperCase()}
+                          #{order.id.slice(0, 10).toUpperCase()}
                         </Box>
                         {' '}· Người bán:{' '}
                         <Box component="span" 
@@ -478,7 +478,22 @@ export default function OrdersPage() {
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
-                      <Chip label={st.label} size="small" sx={{ bgcolor: st.bg, color: st.color, fontWeight: 700, fontSize: '0.72rem', mb: 0.5 }} />
+                      <Chip 
+                        label={
+                          order.status === 'NEGOTIATING' 
+                            ? (order.customPrice ? 'Đã báo giá' : 'Chờ báo giá')
+                            : st.label
+                        } 
+                        size="small" 
+                        sx={{ 
+                          bgcolor: order.status === 'NEGOTIATING' && !order.customPrice ? '#fffbeb' : st.bg, 
+                          color: order.status === 'NEGOTIATING' && !order.customPrice ? '#d97706' : st.color, 
+                          fontWeight: 700, 
+                          fontSize: '0.72rem', 
+                          mb: 0.5,
+                          border: order.status === 'NEGOTIATING' && !order.customPrice ? '1px solid #fde68a' : 'none'
+                        }} 
+                      />
                       <Typography variant="body2" sx={{ fontWeight: 700, color: '#16a34a', display: 'block' }}>
                         {order.amount > 0 
                           ? `${order.amount.toLocaleString('vi-VN')} VNĐ` 
