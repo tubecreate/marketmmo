@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
 import { createNotification } from '@/lib/notifications';
+import { broadcastToSocket } from '@/lib/socket-broadcaster';
 
 // POST /api/orders/[id]/approve-extension
 // Body: { buyerId, action: 'APPROVE' | 'REJECT' }
-export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: orderId } = await context.params;
+    const { id: orderId } = await params;
     const { buyerId, action } = await req.json();
 
     const order = await prisma.order.findUnique({
@@ -51,6 +52,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         targetUrl: '/ban-hang/dich-vu'
       });
 
+      // Notify via Socket.io
+      broadcastToSocket(`user:${order.sellerId}`, 'order:update', { orderId, action: 'APPROVE_EXTENSION' });
+      broadcastToSocket(`user:${order.buyerId}`, 'order:update', { orderId, action: 'APPROVE_EXTENSION' });
+
       return NextResponse.json({ success: true, action: 'APPROVED' });
     } else {
       await prisma.order.update({
@@ -71,6 +76,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         type: 'ORDER_UPDATE',
         targetUrl: '/ban-hang/dich-vu'
       });
+
+      // Notify via Socket.io
+      broadcastToSocket(`user:${order.sellerId}`, 'order:update', { orderId, action: 'REJECT_EXTENSION' });
+      broadcastToSocket(`user:${order.buyerId}`, 'order:update', { orderId, action: 'REJECT_EXTENSION' });
 
       return NextResponse.json({ success: true, action: 'REJECTED' });
     }

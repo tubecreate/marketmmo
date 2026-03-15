@@ -86,7 +86,7 @@ export default function AdminSellerRequestsPage() {
         ) : (
           <Grid container spacing={3}>
             {requests.map((r) => (
-              <Grid item xs={12} key={r.id}>
+              <Grid size={{ xs: 12 }} key={r.id}>
                 <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0' }}>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -122,15 +122,15 @@ export default function AdminSellerRequestsPage() {
                     <Divider sx={{ my: 2 }} />
 
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, display: 'block' }}>SĐT / TELEGRAM</Typography>
                         <Typography variant="body2">{r.phone} / {r.telegram || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, display: 'block' }}>FACEBOOK / CCCD</Typography>
                         <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{r.facebook} / {r.cccd}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 700, display: 'block' }}>NGÂN HÀNG / STK</Typography>
                         <Typography variant="body2">{r.bankName} - {r.bankAccount}</Typography>
                       </Grid>

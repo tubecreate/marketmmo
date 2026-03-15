@@ -11,6 +11,7 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import SearchIcon from '@mui/icons-material/Search';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { useAuth } from '@/context/AuthContext';
+import { useSocket } from '@/context/SocketContext';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -41,6 +42,7 @@ export default function UserChatPage() {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   
+  const { socket } = useSocket();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch rooms logic
@@ -142,12 +144,19 @@ export default function UserChatPage() {
     }
   }, [user, fetchRooms]);
 
-  // Polling for updates
+  // Socket.io for room updates
   useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(() => { fetchRooms(); }, 5000);
-    return () => clearInterval(interval);
-  }, [user, fetchRooms]);
+    if (!user || !socket) return;
+    
+    // Listen for room updates (new messages in any room, new rooms, etc.)
+    socket.on('room:update', () => {
+      fetchRooms();
+    });
+    
+    return () => {
+      socket.off('room:update');
+    };
+  }, [user, socket, fetchRooms]);
 
   // Fetch messages when room is selected
   useEffect(() => {
@@ -158,12 +167,27 @@ export default function UserChatPage() {
     setRooms(prev => prev.map(r => r.id === activeRoomId ? { ...r, unreadCount: 0 } : r));
   }, [activeRoomId, fetchMessages]);
 
-  // Polling for messages in active room
+  // Socket.io for messages in active room
   useEffect(() => {
-    if (!activeRoomId || !user) return;
-    const interval = setInterval(() => { fetchMessages(false); }, 3000);
-    return () => clearInterval(interval);
-  }, [activeRoomId, user, fetchMessages]);
+    if (!activeRoomId || !user || !socket) return;
+    
+    // Join the room
+    socket.emit('join-chat-room', activeRoomId);
+    
+    // Listen for new messages
+    socket.on('message:new', (msg: ChatMessage) => {
+      // Check if message already exists
+      setMessages(prev => {
+        if (prev.find(p => p.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+      fetchRooms(); // refresh sidebar to update last message
+    });
+    
+    return () => {
+      socket.off('message:new');
+    };
+  }, [activeRoomId, user, socket, fetchRooms]);
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -187,7 +211,7 @@ export default function UserChatPage() {
     setNewMsg('');
 
     try {
-      await fetch('/api/chat/messages', {
+      const res = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -197,6 +221,21 @@ export default function UserChatPage() {
           userId: user.id
         })
       });
+      
+      const data = await res.json();
+      if (data.success && data.message && socket) {
+        socket.emit('send-message', {
+          roomId: activeRoomId,
+          message: data.message
+        });
+        // Also notify the socket server to trigger room updates for the recipient
+        socket.emit('internal:emit', {
+          room: `user:${activeRoom.otherUser.id}`,
+          event: 'room:update',
+          payload: {}
+        });
+      }
+      
       fetchRooms(); // refresh to get real ID and update last message
     } catch { /* ignore */ }
   };

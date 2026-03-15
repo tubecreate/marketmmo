@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Order already reviewed' }, { status: 400 });
     }
 
-    const review = await prisma.$transaction(async (tx: any) => {
+    const review = await prisma.$transaction(async (tx) => {
       const rev = await tx.review.create({
         data: {
           orderId,
@@ -88,7 +88,8 @@ export async function POST(req: Request) {
         select: { rating: true }
       });
 
-      const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+      const totalRating = allReviews.reduce((sum, r) => sum + r.rating, 0);
+      const avgRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
 
       await tx.product.update({
         where: { id: productId },

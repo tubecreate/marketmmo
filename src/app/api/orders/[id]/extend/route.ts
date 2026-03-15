@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
 import { createNotification } from '@/lib/notifications';
+import { broadcastToSocket } from '@/lib/socket-broadcaster';
 
 // POST /api/orders/[id]/extend
 // Body: { sellerId, hours }
-export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: orderId } = await context.params;
+    const { id: orderId } = await params;
     const { sellerId, hours } = await req.json();
 
     if (!hours || hours <= 0) {
@@ -46,6 +47,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       type: 'ORDER_UPDATE',
       targetUrl: '/tai-khoan/don-hang'
     });
+
+    // Notify via Socket.io
+    broadcastToSocket(`user:${(updatedOrder as any).buyerId}`, 'order:update', { orderId, type: 'EXTENSION_REQUEST' });
+    broadcastToSocket(`user:${sellerId}`, 'order:update', { orderId, type: 'EXTENSION_REQUEST' });
 
     return NextResponse.json({ success: true, pendingHours: hours });
   } catch (error) {

@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
 import { createNotification } from '@/lib/notifications';
+import { broadcastToSocket } from '@/lib/socket-broadcaster';
 
 // POST /api/orders/[id]/cancel-preorder
 // Body: { buyerId }
-export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: orderId } = await context.params;
+    const { id: orderId } = await params;
     const { buyerId } = await req.json();
 
     if (!buyerId) {
@@ -45,18 +46,23 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
     // Notify seller
     try {
+      const orderTitle = orderId.slice(-8).toUpperCase();
       await sendSystemMessage(
         order.sellerId,
-        `❌ Đơn đặt trước #${orderId.slice(-8).toUpperCase()} đã bị người mua huỷ. Số tiền tạm giữ đã được trả lại.`
+        `❌ Đơn đặt trước #${orderTitle} đã bị người mua huỷ. Số tiền tạm giữ đã được trả lại.`
       );
 
       await createNotification({
         userId: order.sellerId,
         title: 'Đơn đặt trước bị huỷ',
-        content: `Người mua đã huỷ đơn đặt trước #${orderId.slice(-8).toUpperCase()} và nhận lại tiền.`,
+        content: `Người mua đã huỷ đơn đặt trước #${orderTitle}.`,
         type: 'ORDER_UPDATE',
         targetUrl: '/ban-hang/dat-truoc'
       });
+
+      // Notify via Socket.io
+      broadcastToSocket(`user:${order.buyerId}`, 'order:update', { orderId, status: 'CANCELLED' });
+      broadcastToSocket(`user:${order.sellerId}`, 'order:update', { orderId, status: 'CANCELLED' });
     } catch (e) {
       console.error('Failed to notify seller about pre-order cancellation', e);
     }

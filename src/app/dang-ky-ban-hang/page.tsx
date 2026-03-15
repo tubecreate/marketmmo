@@ -172,14 +172,14 @@ export default function SellerRegisterPage() {
             />
 
             <Grid container spacing={2} sx={{ mb: 2.5 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   name="phone" label="Số điện thoại *" value={form.phone} onChange={handleChange} fullWidth
                   disabled={isPending}
                   InputProps={{ startAdornment: <Box component="span" sx={{ mr: 1, color: 'text.secondary' }}><PhoneIcon fontSize="small" /></Box> }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   name="facebook" label="Link Facebook *" value={form.facebook} onChange={handleChange} fullWidth
                   placeholder="https://facebook.com/..." disabled={isPending}
@@ -189,14 +189,14 @@ export default function SellerRegisterPage() {
             </Grid>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   name="cccd" label="Số CCCD / CMND *" value={form.cccd} onChange={handleChange} fullWidth
                   disabled={isPending}
                   InputProps={{ startAdornment: <Box component="span" sx={{ mr: 1, color: 'text.secondary' }}><CreditCardIcon fontSize="small" /></Box> }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   name="telegram" label="Username Telegram" value={form.telegram} onChange={handleChange} fullWidth
                   placeholder="@username" disabled={isPending}
@@ -210,14 +210,14 @@ export default function SellerRegisterPage() {
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, color: '#16a34a' }}>Thông tin ngân hàng</Typography>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   name="bankName" label="Tên ngân hàng *" value={form.bankName} onChange={handleChange} fullWidth
                   placeholder="VD: MB Bank, Vietcombank..." disabled={isPending}
                   InputProps={{ startAdornment: <Box component="span" sx={{ mr: 1, color: 'text.secondary' }}><AccountBalanceIcon fontSize="small" /></Box> }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   name="bankAccount" label="Số tài khoản ngân hàng *" value={form.bankAccount} onChange={handleChange} fullWidth
                   disabled={isPending}

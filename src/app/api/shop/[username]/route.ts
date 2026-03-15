@@ -3,10 +3,10 @@ import { prisma } from '@/lib/db';
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ username: string }> }
+  context: { params: Promise<{ username: string }> }
 ) {
   try {
-    const { username } = await params;
+    const { username } = await context.params;
     const trimmedUsername = username.trim();
 
     const user = await prisma.user.findFirst({

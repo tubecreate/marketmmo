@@ -5,10 +5,10 @@ import { prisma } from '@/lib/db';
 // Seller reply to a review
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const body = await req.json();
     const { sellerReply, userId } = body;
 

@@ -9,6 +9,7 @@ import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useAuth } from '@/context/AuthContext';
+import { useSocket } from '@/context/SocketContext';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -37,6 +38,7 @@ export default function QuickChatDialog({ open, onClose, targetUser }: QuickChat
   const [newMsg, setNewMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const { socket } = useSocket();
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Dragging state
@@ -127,14 +129,26 @@ export default function QuickChatDialog({ open, onClose, targetUser }: QuickChat
     }
   }, [open, targetUser, user, fetchMessages]);
 
-  // Polling
+  // Socket.io for real-time messages
   useEffect(() => {
-    if (!open || !roomId || !user) return;
-    const interval = setInterval(() => {
-      fetchMessages(roomId);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [open, roomId, user, fetchMessages]);
+    if (!open || !roomId || !socket) return;
+    
+    // Join the room
+    socket.emit('join-chat-room', roomId);
+    
+    // Listen for new messages
+    socket.on('message:new', (msg: ChatMessage) => {
+      // Check if message already exists (optimistic updates might create duplicates)
+      setMessages(prev => {
+        if (prev.find(p => p.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    });
+    
+    return () => {
+      socket.off('message:new');
+    };
+  }, [open, roomId, socket]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -160,7 +174,7 @@ export default function QuickChatDialog({ open, onClose, targetUser }: QuickChat
     }]);
 
     try {
-      await fetch('/api/chat/messages', {
+      const res = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,6 +183,15 @@ export default function QuickChatDialog({ open, onClose, targetUser }: QuickChat
           userId: user.id
         })
       });
+      const data = await res.json();
+      
+      if (data.success && data.message && socket) {
+        socket.emit('send-message', {
+          roomId,
+          message: data.message
+        });
+      }
+      
       fetchMessages(roomId);
     } catch (err) {
       console.error('Send message error:', err);

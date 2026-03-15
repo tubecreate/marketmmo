@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
 import { createNotification } from '@/lib/notifications';
+import { broadcastToSocket } from '@/lib/socket-broadcaster';
 
 // POST /api/orders/create
 // Body: { buyerId, productId, variantId?, quantity }
@@ -67,6 +68,10 @@ export async function POST(req: Request) {
           targetUrl: '/ban-hang/dich-vu'
         });
 
+        // Notify via Socket.io
+        broadcastToSocket(`user:${product.sellerId}`, 'order:update', { orderId: order.id, status: 'NEGOTIATING' });
+        broadcastToSocket(`user:${buyerId}`, 'order:update', { orderId: order.id, status: 'NEGOTIATING' });
+
         return NextResponse.json({
           success: true,
           order: {
@@ -130,6 +135,10 @@ export async function POST(req: Request) {
           type: 'ORDER_UPDATE',
           targetUrl: '/ban-hang/dich-vu'
         });
+
+        // Notify via Socket.io
+        broadcastToSocket(`user:${product.sellerId}`, 'order:update', { orderId: order.id, status: 'PENDING_ACCEPTANCE' });
+        broadcastToSocket(`user:${buyerId}`, 'order:update', { orderId: order.id, status: 'PENDING_ACCEPTANCE' });
 
         return NextResponse.json({
           success: true,

@@ -9,7 +9,6 @@ import {
   Skeleton, Dialog, DialogTitle, DialogContent, DialogActions, Rating
 } from '@mui/material';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -21,6 +20,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useAuth } from '@/context/AuthContext';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import QuickChatDialog from '@/components/chat/QuickChatDialog';
+import { useSocket } from '@/context/SocketContext';
 
 
 const statusMap: Record<string, { label: string; color: string; bg: string }> = {
@@ -71,6 +71,7 @@ interface Order {
 export default function OrdersPage() {
   const router = useRouter();
   const { user, refreshUser } = useAuth();
+  const { socket } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -88,6 +89,7 @@ export default function OrdersPage() {
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancellingPreOrderId, setCancellingPreOrderId] = useState<string | null>(null);
+  const [cancellingServiceOrderId, setCancellingServiceOrderId] = useState<string | null>(null);
   const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
 
   // Review State
@@ -255,11 +257,64 @@ export default function OrdersPage() {
     });
   }, [user, fetchOrders]);
 
+  const handleCancelServiceOrder = useCallback(async (orderId: string, isOverdue = false) => {
+    if (!user) return;
+    setConfirmState({
+      open: true,
+      title: isOverdue ? 'Huỷ đơn quá hạn' : 'Huỷ yêu cầu dịch vụ',
+      message: isOverdue 
+        ? 'Đơn hàng này đã quá thời gian cam kết. Bạn có muốn huỷ đơn và nhận lại tiền ngay lập tức không?'
+        : 'Người bán chưa xác nhận đơn hàng này. Bạn có muốn huỷ yêu cầu và nhận lại tiền không?',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmState(prev => ({ ...prev, open: false }));
+        setCancellingServiceOrderId(orderId);
+        try {
+          const res = await fetch(`/api/orders/${orderId}/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, role: 'BUYER' }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success('Đã huỷ đơn hàng và hoàn tiền thành công!');
+            fetchOrders();
+            refreshUser();
+          } else {
+            toast.error(data.error || 'Lỗi khi huỷ đơn');
+          }
+        } catch {
+          toast.error('Lỗi kết nối');
+        } finally {
+          setCancellingServiceOrderId(null);
+        }
+      }
+    });
+  }, [user, fetchOrders, refreshUser]);
+
   // 1. Initial fetch
   useEffect(() => {
     if (!localStorage.getItem('mmo_user')) { router.push('/dang-nhap'); return; }
-    if (user?.id) fetchOrders();
-  }, [user?.id, fetchOrders, router]);
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 30000); // Polling as fallback
+    return () => clearInterval(interval);
+  }, [fetchOrders, router]);
+
+  // 2. Real-time updates via Socket.io
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleOrderUpdate = (data: any) => {
+      console.log('Real-time order update (buyer) received:', data);
+      fetchOrders(); // Refresh order list
+      refreshUser(); // Refresh balance too if needed
+    };
+
+    socket.on('order:update', handleOrderUpdate);
+    return () => {
+      socket.off('order:update', handleOrderUpdate);
+    };
+  }, [socket, fetchOrders, refreshUser]);
 
   // 2. Deep-linking logic
   useEffect(() => {
@@ -571,6 +626,35 @@ export default function OrdersPage() {
                           <AccessTimeIcon sx={{ fontSize: 14 }} /> ĐANG LÀM
                         </Typography>
                       ) }
+
+                      {order.status === 'PENDING_ACCEPTANCE' && (
+                        <Button 
+                          size="small" variant="outlined" color="error" 
+                          disabled={cancellingServiceOrderId === order.id}
+                          onClick={() => handleCancelServiceOrder(order.id)}
+                          sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700 }}
+                        >
+                          {cancellingServiceOrderId === order.id ? 'Đang huỷ...' : 'Huỷ đơn'}
+                        </Button>
+                      )}
+
+                      {order.status === 'IN_PROGRESS' && order.startedAt && (() => {
+                        const deliveryHours = order.negotiatedDeliveryHours || order.variant?.deliveryTimeHours || order.product?.deliveryTimeHours || 0;
+                        const isOverdue = (new Date().getTime() - new Date(order.startedAt).getTime() > deliveryHours * 3600000);
+                        if (isOverdue) {
+                          return (
+                            <Button 
+                              size="small" variant="contained" color="error" 
+                              disabled={cancellingServiceOrderId === order.id}
+                              onClick={() => handleCancelServiceOrder(order.id, true)}
+                              sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700 }}
+                            >
+                              {cancellingServiceOrderId === order.id ? 'Đang huỷ...' : 'HUỶ VÌ QUÁ HẠN'}
+                            </Button>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       <Button 
                         size="small" variant="outlined" startIcon={<ForumIcon />}

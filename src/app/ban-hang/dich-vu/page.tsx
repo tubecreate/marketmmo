@@ -16,6 +16,7 @@ import UpdateIcon from '@mui/icons-material/Update';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import QuickChatDialog from '@/components/chat/QuickChatDialog';
+import { useSocket } from '@/context/SocketContext';
 
 interface Order {
   id: string;
@@ -108,6 +109,7 @@ const CountdownTimer = ({ startedAt, durationHours }: { startedAt: string; durat
 export default function SellerServiceOrdersPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { socket } = useSocket();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState('all');
@@ -183,6 +185,21 @@ export default function SellerServiceOrdersPage() {
     const interval = setInterval(() => fetchOrders(true), 30000);
     return () => clearInterval(interval);
   }, [fetchOrders]);
+
+  // Real-time updates
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleOrderUpdate = (data: any) => {
+      console.log('Real-time order update received:', data);
+      fetchOrders(true); // Silent refresh
+    };
+
+    socket.on('order:update', handleOrderUpdate);
+    return () => {
+      socket.off('order:update', handleOrderUpdate);
+    };
+  }, [socket, fetchOrders]);
 
   const handleBid = async () => {
     if (!selectedOrder || !bidPrice || !bidDeliveryHours) return;
@@ -263,6 +280,29 @@ export default function SellerServiceOrdersPage() {
         toast.error(data.error, { id: toastId });
       }
     } finally { setActionLoading(false); }
+  };
+
+  const handleCancelOrder = async (order?: Order) => {
+    const target = order || selectedOrder;
+    if (!target) return;
+    
+    setProcessingOrderId(target.id);
+    const toastId = toast.loading('Đang xử lý huỷ đơn...');
+    try {
+      const res = await fetch(`/api/orders/${target.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, role: 'SELLER' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Đã huỷ đơn hàng và hoàn tiền thành công!', { id: toastId });
+        setDetailOpen(false);
+        fetchOrders();
+      } else {
+        toast.error(data.error, { id: toastId });
+      }
+    } finally { setProcessingOrderId(null); }
   };
 
   const handleExtend = async () => {
@@ -494,6 +534,22 @@ export default function SellerServiceOrdersPage() {
                               BÀN GIAO
                             </Button>
                           )}
+
+                          {order.status === 'IN_PROGRESS' && (
+                            <Button 
+                              variant="contained" size="small" color="error" disableElevation
+                              onClick={() => handleOpenConfirm(
+                                'Xác nhận huỷ đơn',
+                                'Bạn có chắc chắn muốn huỷ đơn hàng này? Tiền sẽ được hoàn trả lại cho khách hàng và bạn sẽ không nhận được thanh toán.',
+                                () => handleCancelOrder(order),
+                                'error'
+                              )}
+                              disabled={processingOrderId === order.id}
+                              sx={{ fontSize: '0.65rem', py: 0.5, px: 1, fontWeight: 800, minWidth: 'fit-content', borderRadius: 1.5 }}
+                            >
+                              HUỶ ĐƠN
+                            </Button>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -605,6 +661,20 @@ export default function SellerServiceOrdersPage() {
                       {actionLoading ? 'ĐANG GỬI...' : 'XÁC NHẬN BÀN GIAO'}
                     </Button>
                   </Box>
+                )}
+                {selectedOrder?.status === 'IN_PROGRESS' && (
+                  <Button 
+                    fullWidth variant="outlined" color="error" 
+                    onClick={() => handleOpenConfirm(
+                      'Xác nhận huỷ đơn',
+                      'Bạn có chắc chắn muốn huỷ đơn hàng này? Tiền sẽ được hoàn trả lại cho khách hàng.',
+                      () => handleCancelOrder(),
+                      'error'
+                    )}
+                    sx={{ mb: 1, fontWeight: 700, borderRadius: 2 }}
+                  >
+                    Huỷ đơn hàng
+                  </Button>
                 )}
                 <Button fullWidth variant="outlined" onClick={() => setDetailOpen(false)} sx={{ fontWeight: 700, borderRadius: 2 }}>Đóng</Button>
                 {selectedOrder?.status === 'IN_PROGRESS' && !isPendingExtension && (

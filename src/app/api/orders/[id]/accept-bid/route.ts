@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendSystemMessage } from '@/lib/chat';
 import { createNotification } from '@/lib/notifications';
+import { broadcastToSocket } from '@/lib/socket-broadcaster';
 
 // POST /api/orders/[id]/accept-bid
 // Body: { buyerId }
-export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id: orderId } = await context.params;
+    const { id: orderId } = await params;
     const { buyerId } = await req.json();
 
     const order = await prisma.order.findUnique({
@@ -63,6 +64,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       type: 'ORDER_UPDATE',
       targetUrl: '/ban-hang/dich-vu'
     });
+
+    // Notify via Socket.io
+    broadcastToSocket(`user:${order.buyerId}`, 'order:update', { orderId, status: 'PENDING_ACCEPTANCE' });
+    broadcastToSocket(`user:${order.sellerId}`, 'order:update', { orderId, status: 'PENDING_ACCEPTANCE' });
 
     return NextResponse.json({ success: true, order: updatedOrder });
   } catch (error) {

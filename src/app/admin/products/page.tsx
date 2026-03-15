@@ -87,7 +87,7 @@ export default function AdminProductsPage() {
         ) : (
           <Grid container spacing={3}>
             {products.map((p) => (
-              <Grid item xs={12} key={p.id}>
+              <Grid size={{ xs: 12 }} key={p.id}>
                 <Card sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
@@ -140,7 +140,7 @@ export default function AdminProductsPage() {
                         <Divider sx={{ my: 2 }} />
 
                         <Grid container spacing={2}>
-                          <Grid item xs={12} md={8}>
+                          <Grid size={{ xs: 12, md: 8 }}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Mô tả:</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ 
                               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' 
@@ -148,7 +148,7 @@ export default function AdminProductsPage() {
                               {p.description}
                             </Typography>
                           </Grid>
-                          <Grid item xs={12} md={4}>
+                          <Grid size={{ xs: 12, md: 4 }}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Các gói sản phẩm ({p.variants.length}):</Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                               {p.variants.map((v) => (

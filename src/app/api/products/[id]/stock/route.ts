@@ -159,7 +159,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
 
 // DELETE /api/products/[id]/stock?itemId=xxx
-export async function DELETE(req: Request) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   const { searchParams } = new URL(req.url);
   const itemId = searchParams.get('itemId');
   if (!itemId) return NextResponse.json({ error: 'Missing item id' }, { status: 400 });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createNotification } from '@/lib/notifications';
+import { broadcastToSocket } from '@/lib/socket-broadcaster';
 
 // POST /api/orders/[id]/confirm
 // Body: { buyerId }
@@ -58,6 +59,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       type: 'ORDER_UPDATE',
       targetUrl: '/ban-hang/dashboard'
     });
+
+    // Notify via Socket.io
+    broadcastToSocket(`user:${order.buyerId}`, 'order:update', { orderId, status: 'COMPLETED' });
+    broadcastToSocket(`user:${order.sellerId}`, 'order:update', { orderId, status: 'COMPLETED' });
 
     return NextResponse.json({ success: true, message: 'Xác nhận đơn hàng thành công' });
   } catch (error) {
