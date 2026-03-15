@@ -22,6 +22,7 @@ const DRAWER_WIDTH = 260;
 
 const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, href: '/admin' },
+  { text: 'Quản lý danh mục', icon: <GavelIcon />, href: '/admin/categories' },
   { text: 'Cài đặt hệ thống', icon: <SettingsIcon />, href: '/admin/settings' },
   { text: 'Ngoại lệ thành viên', icon: <PeopleIcon />, href: '/admin/overrides' },
   { text: 'Quản lý tranh chấp', icon: <GavelIcon />, href: '/admin/disputes' },

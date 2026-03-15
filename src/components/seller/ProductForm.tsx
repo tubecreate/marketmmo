@@ -15,7 +15,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 
-interface Category { id: string; name: string; }
+interface Category { id: string; name: string; parentId?: string | null; }
 interface Variant { id: string; name: string; price: string; description: string; allowBidding: boolean; deliveryTimeHours: string; }
 
 interface ProductFormProps {
@@ -332,8 +332,27 @@ export default function ProductForm({ open, onClose, onSuccess, product, sellerI
                 {categories.length === 0 ? (
                   <MenuItem value="">-- Chọn danh mục --</MenuItem>
                 ) : (
-                  categories.map((cat) => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)
+                  // Hierarchical grouping
+                  categories
+                    .filter(cat => !cat.parentId) // Main parents
+                    .map(parent => [
+                      <MenuItem key={parent.id} disabled sx={{ fontWeight: 800, color: 'text.primary', opacity: '1 !important', bgcolor: '#f8fafc' }}>
+                        {parent.name}
+                      </MenuItem>,
+                      ...categories
+                        .filter(child => child.parentId === parent.id)
+                        .map(child => (
+                          <MenuItem key={child.id} value={child.id} sx={{ pl: 4 }}>
+                            {child.name}
+                          </MenuItem>
+                        ))
+                    ])
+                    .flat()
                 )}
+                {/* Fallback for categories without parents if any */}
+                {categories.filter(c => !c.parentId && !categories.some(child => child.parentId === c.id)).map(c => (
+                   <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                ))}
               </TextField>
             </Box>
 
