@@ -15,7 +15,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
-        seller: { select: { id: true, username: true, fullName: true, avatar: true, isActive: true, createdAt: true, _count: { select: { sellerOrders: true } } } },
+        seller: { select: { id: true, username: true, fullName: true, avatar: true, isActive: true, createdAt: true, insuranceBalance: true, _count: { select: { sellerOrders: true } } } },
         _count: {
           select: {
             items: { where: { isSold: false } },

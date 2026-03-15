@@ -13,6 +13,9 @@ import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import LoginModal from '@/components/auth/LoginModal';
+import QuickChatDialog from '@/components/chat/QuickChatDialog';
 import ProductCard from '@/components/products/ProductCard';
 
 interface SellerData {
@@ -25,6 +28,7 @@ interface SellerData {
   _count: {
     sellerOrders: number;
   };
+  insuranceBalance?: number;
 }
 
 interface ProductData {
@@ -42,8 +46,11 @@ interface ProductData {
 
 export default function ShopDetailPage() {
   const params = useParams();
+  const { user } = useAuth();
   const [data, setData] = useState<{ seller: SellerData; products: ProductData[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     if (!params.username) return;
@@ -217,6 +224,17 @@ export default function ShopDetailPage() {
                         </Grid>
                         <Grid size={{ xs: 6, sm: 4, md: "auto" }}>
                           <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Box sx={{ p: 1, bgcolor: '#fefce8', borderRadius: 2, display: 'flex' }}>
+                              <VerifiedUserIcon sx={{ fontSize: 22, color: '#eab308' }} />
+                            </Box>
+                            <Box>
+                              <Typography variant="caption" display="block" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.65rem' }}>Quỹ Bảo hiểm</Typography>
+                              <Typography variant="body1" sx={{ fontWeight: 800, color: '#1e293b' }}>{(seller.insuranceBalance || 0).toLocaleString()}đ</Typography>
+                            </Box>
+                          </Stack>
+                        </Grid>
+                        <Grid size={{ xs: 6, sm: 4, md: "auto" }}>
+                          <Stack direction="row" spacing={1.5} alignItems="center">
                             <Box sx={{ p: 1, bgcolor: '#f0fdf4', borderRadius: 2, display: 'flex' }}>
                               <ShoppingBagIcon sx={{ fontSize: 22, color: '#16a34a' }} />
                             </Box>
@@ -243,10 +261,14 @@ export default function ShopDetailPage() {
                 </Grid>
 
                 <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: { md: 'right' } }}>
-                  <Button 
+                   <Button 
                     variant="contained" 
                     disableElevation
                     startIcon={<ChatIcon />}
+                    onClick={() => {
+                      if (!user) setLoginOpen(true);
+                      else setChatOpen(true);
+                    }}
                     sx={{ 
                       bgcolor: '#4cc752', 
                       color: 'white', 
@@ -264,7 +286,7 @@ export default function ShopDetailPage() {
                       }
                     }}
                   >
-                    Đăng nhập để chat
+                    {!user ? 'Đăng nhập để chat' : 'Chat ngay'}
                   </Button>
                 </Grid>
               </Grid>
@@ -355,7 +377,8 @@ export default function ShopDetailPage() {
                     status={p.status}
                     seller={{
                       username: seller.username,
-                      isOnline: seller.isActive
+                      isOnline: seller.isActive,
+                      insuranceBalance: seller.insuranceBalance
                     }}
                   />
                 </Grid>
@@ -364,6 +387,23 @@ export default function ShopDetailPage() {
           )}
         </Container>
       </Box>
+
+      <LoginModal 
+        open={loginOpen} 
+        onClose={() => setLoginOpen(false)} 
+        onSuccess={() => {/* Success is handled by context change */}}
+      />
+
+      <QuickChatDialog
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        targetUser={seller ? {
+          id: seller.id,
+          username: seller.username,
+          avatar: seller.avatar
+        } : null}
+      />
+
       <style jsx global>{`
         @keyframes pulse {
           0% { transform: scale(1); opacity: 0.8; }

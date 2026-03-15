@@ -12,7 +12,6 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import InventoryIcon from '@mui/icons-material/Inventory';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -24,6 +23,8 @@ import LoginIcon from '@mui/icons-material/Login';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import LoginModal from '@/components/auth/LoginModal';
+import QuickChatDialog from '@/components/chat/QuickChatDialog';
+import { Shield } from 'lucide-react';
 
 interface Variant { id: string; name: string; price: number; allowBidding: boolean; deliveryTimeHours: number | null; description?: string | null; _count?: { items: number }; }
 
@@ -31,16 +32,28 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
-  const [product, setProduct] = useState<any | null>(null);
+  const [product, setProduct] = useState<{
+    id: string; title: string; price: number; type: string; isService: boolean;
+    deliveryTimeHours?: number; thumbnail?: string; status: string;
+    description?: string; shortDescription?: string; rating?: number;
+    allowBidding?: boolean;
+    seller?: { id: string; username: string; avatar?: string; isActive: boolean; insuranceBalance: number };
+    _count?: { orders: number; items: number };
+    category?: { name: string };
+  } | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState('');
-  const [orderResult, setOrderResult] = useState<any | null>(null);
+  const [orderResult, setOrderResult] = useState<{
+    id: string; status: string; variantName: string; quantity: number; amount: number;
+    deliveredContent?: string; preOrder?: boolean;
+  } | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedVar, setSelectedVar] = useState<Variant | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
 
@@ -123,6 +136,14 @@ export default function ProductDetailPage() {
         setQuantity(q => q + 1);
       }
     }
+  };
+
+  const handleSellerChat = () => {
+    if (!user) {
+      setLoginOpen(true);
+      return;
+    }
+    setChatOpen(true);
   };
 
   if (loading) {
@@ -241,7 +262,7 @@ export default function ProductDetailPage() {
                 <Box sx={{ display: 'flex', alignItems: 'center', color: '#f59e0b', gap: 0.5 }}>
                   <Rating value={Number(product.rating) || 0} precision={0.5} readOnly size="small" sx={{ color: '#f59e0b' }} />
                   <Typography component="span" sx={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
-                    ({(product._count as any)?.orders || 0} đánh giá)
+                    ({product._count?.orders || 0} đánh giá)
                   </Typography>
                 </Box>
                 <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto' }} />
@@ -267,7 +288,15 @@ export default function ProductDetailPage() {
                   icon={<ChatIcon sx={{ fontSize: '14px !important', color: '#16a34a' }} />}
                   label={(product.seller as Record<string, string>)?.username}
                   size="small"
-                  sx={{ bgcolor: 'transparent', color: '#16a34a', fontWeight: 700, '& .MuiChip-label': { px: 0.5 } }}
+                  onClick={handleSellerChat}
+                  sx={{ 
+                    bgcolor: 'transparent', 
+                    color: '#16a34a', 
+                    fontWeight: 700, 
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'rgba(22, 163, 74, 0.05)' },
+                    '& .MuiChip-label': { px: 0.5 } 
+                  }}
                 />
                 <Typography variant="caption" color="text.secondary">• {(product.seller as Record<string, boolean>)?.isActive ? 'Online ngay lúc này' : 'Offline'}</Typography>
                 <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto', display: { xs: 'none', sm: 'block' } }} />
@@ -292,6 +321,21 @@ export default function ProductDetailPage() {
                 >
                   Xem Shop
                 </Button>
+                {product.seller?.insuranceBalance > 0 && (
+                  <Chip
+                    icon={<Shield size={14} fill="#eab308" color="#eab308" />}
+                    label={`BẢO HIỂM: ${product.seller.insuranceBalance.toLocaleString('vi-VN')}đ`}
+                    sx={{ 
+                      bgcolor: '#fefce8', 
+                      color: '#854d0e', 
+                      fontWeight: 800, 
+                      fontSize: '0.75rem',
+                      border: '1px solid #fef08a',
+                      height: 32,
+                      borderRadius: 1.5
+                    }}
+                  />
+                )}
               </Box>
 
               <Divider sx={{ mb: 3, borderStyle: 'dashed' }} />
@@ -378,12 +422,14 @@ export default function ProductDetailPage() {
                   {buyError}
                 </Alert>
               )}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+              {product.isService && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                   <AccessTimeIcon sx={{ color: '#64748b', fontSize: 18 }} />
                   <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
                     THỜI GIAN GIAO: <span style={{ color: '#1e293b' }}>{selectedVar?.deliveryTimeHours || product.deliveryTimeHours || 'Thỏa thuận'} GIỜ</span>
                   </Typography>
                 </Box>
+              )}
               {!user ? (
                 <>
                   <Box sx={{ p: 2, bgcolor: '#fefce8', borderRadius: 1, mb: 2, display: 'flex', gap: 1 }}>
@@ -469,7 +515,10 @@ export default function ProductDetailPage() {
                 </Box>
               ) : (
                 <Stack spacing={3}>
-                  {reviews.map((rev: any) => (
+                  {reviews.map((rev: {
+                    id: string; rating: number; comment?: string; createdAt: string | Date;
+                    sellerReply?: string; order: { buyer: { username: string } };
+                  }) => (
                     <Box key={rev.id}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
@@ -614,6 +663,22 @@ export default function ProductDetailPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <QuickChatDialog
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        targetUser={product.seller ? {
+          id: product.seller.id,
+          username: product.seller.username,
+          avatar: product.seller.avatar
+        } : null}
+      />
+      <style jsx global>{`
+        @keyframes pulse-glow {
+          0% { box-shadow: 0 4px 8px rgba(251, 191, 36, 0.4); }
+          50% { box-shadow: 0 4px 20px rgba(251, 191, 36, 0.7); }
+          100% { box-shadow: 0 4px 8px rgba(251, 191, 36, 0.4); }
+        }
+      `}</style>
     </SiteLayout>
   );
 }

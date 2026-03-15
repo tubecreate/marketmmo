@@ -12,21 +12,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ProductCard, { ProductCardProps } from '@/components/products/ProductCard';
 
-const productCategories = [
-  { label: 'Tất cả', value: 'all' },
-  { label: 'Email', value: 'email' },
-  { label: 'Tài khoản', value: 'account' },
-  { label: 'Key phần mềm', value: 'key' },
-  { label: 'Tool & File', value: 'tool' },
-  { label: 'Nâng cấp', value: 'upgrade' },
-];
-
-const serviceCategories = [
-  { label: 'Tất cả', value: 'all' },
-  { label: 'Dịch vụ', value: 'service' },
-  { label: 'Tăng tương tác', value: 'engagement' },
-  { label: 'Marketing', value: 'marketing' },
-];
+// Product Categories and Service Categories will now be fetched from API
 
 const stats = [
   { label: 'Người dùng', value: '15,000+', icon: <GroupsIcon sx={{ fontSize: 28, color: '#4cc752' }} /> },
@@ -35,18 +21,48 @@ const stats = [
   { label: 'Hỗ trợ 24/7', value: 'AI + Agent', icon: <SupportAgentIcon sx={{ fontSize: 28, color: '#4cc752' }} /> },
 ];
 
+interface CategoryType {
+  id: string;
+  name: string;
+  slug: string;
+  _count: {
+    products: number;
+  };
+}
+
 export default function HomePage() {
   const [mainTab, setMainTab] = useState(0);
-  const [productCat, setProductCat] = useState('all');
-  const [serviceCat, setServiceCat] = useState('all');
+  const [currentCat, setCurrentCat] = useState('all');
+  const [categories, setCategories] = useState<CategoryType[]>([]);
   const [allProducts, setAllProducts] = useState<ProductCardProps[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
+  // Fetch categories
   useEffect(() => {
-    fetch('/api/products?limit=20')
+    fetch('/api/categories')
       .then(r => r.json())
-      .then(data => {
-        const mapped: ProductCardProps[] = (data.products ?? []).map((p: any) => ({
+      .then(data => setCategories(data.categories || []));
+  }, []);
+
+  // Fetch products based on filters
+  useEffect(() => {
+    const fetchProducts = async () => {
+      let url = '/api/products?limit=20';
+      if (mainTab === 1) url += '&type=DIGITAL';
+      if (mainTab === 2) url += '&type=SERVICE';
+      if (currentCat !== 'all') url += `&category=${currentCat}`;
+
+      setLoadingProducts(true);
+      try {
+        const r = await fetch(url);
+        const data = await r.json();
+        const mapped: ProductCardProps[] = (data.products ?? []).map((p: {
+          id: string; title: string; slug: string; price: number; priceMax?: number;
+          type: string; thumbnail?: string; category?: { name: string; slug: string };
+          seller?: { username: string; isActive: boolean; insuranceBalance?: number };
+          viewCount: number; soldCount: number; rating: number; isSponsored: boolean;
+          shortDescription?: string; status: string;
+        }) => ({
           id: p.id, title: p.title, slug: p.slug,
           price: p.price, priceMax: p.priceMax ?? undefined,
           type: p.type, thumbnail: p.thumbnail ?? undefined,
@@ -54,7 +70,8 @@ export default function HomePage() {
           seller: { 
             username: p.seller?.username ?? 'n/a', 
             isVerified: false, 
-            isOnline: p.seller?.isActive ?? false 
+            isOnline: p.seller?.isActive ?? false,
+            insuranceBalance: p.seller?.insuranceBalance
           },
           viewCount: p.viewCount, soldCount: p.soldCount, rating: p.rating,
           isSponsored: p.isSponsored,
@@ -62,16 +79,22 @@ export default function HomePage() {
           status: p.status,
         }));
         setAllProducts(mapped);
+      } catch (err) {
+        console.error('Failed to fetch products:', err);
+      } finally {
         setLoadingProducts(false);
-      })
-      .catch(() => setLoadingProducts(false));
-  }, []);
+      }
+    };
 
-  const displayedProducts = mainTab === 2
-    ? allProducts.filter((p) => p.type === 'SERVICE')
-    : mainTab === 1
-    ? allProducts.filter((p) => p.type === 'DIGITAL')
-    : allProducts;
+    fetchProducts();
+  }, [mainTab, currentCat]);
+
+  // Reset category when switching main tab
+  useEffect(() => {
+    setCurrentCat('all');
+  }, [mainTab]);
+
+  const displayedProducts = allProducts;
 
   return (
     <Box>
@@ -270,14 +293,31 @@ export default function HomePage() {
 
             {/* Sub categories */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              {(mainTab !== 2 ? productCategories : serviceCategories).map((c) => {
-                const active = mainTab !== 2 ? productCat === c.value : serviceCat === c.value;
+              <Chip
+                label="Tất cả"
+                size="small"
+                onClick={() => setCurrentCat('all')}
+                sx={{
+                  borderRadius: 1.5,
+                  fontWeight: currentCat === 'all' ? 700 : 500,
+                  fontSize: '0.72rem',
+                  bgcolor: currentCat === 'all' ? '#16a34a' : alpha('#16a34a', 0.06),
+                  color: currentCat === 'all' ? 'white' : '#16a34a',
+                  border: `1px solid ${currentCat === 'all' ? '#16a34a' : alpha('#16a34a', 0.2)}`,
+                  '&:hover': { bgcolor: currentCat === 'all' ? '#15803d' : alpha('#16a34a', 0.12) },
+                  cursor: 'pointer',
+                }}
+              />
+              {categories.map((c) => {
+                const active = currentCat === c.slug;
+                const count = c._count?.products || 0;
+                if (count === 0) return null; // Only show categories with active products
                 return (
                   <Chip
-                    key={c.value}
-                    label={`${c.label}${c.value !== 'all' ? ' (223)' : ''}`}
+                    key={c.id}
+                    label={`${c.name} (${count})`}
                     size="small"
-                    onClick={() => mainTab !== 2 ? setProductCat(c.value) : setServiceCat(c.value)}
+                    onClick={() => setCurrentCat(c.slug)}
                     sx={{
                       borderRadius: 1.5,
                       fontWeight: active ? 700 : 500,

@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     where: { id: userId },
     select: {
       id: true, username: true, email: true, fullName: true, balance: true,
-      holdBalance: true, // <-- Added this
+      holdBalance: true, insuranceBalance: true,
       role: true, level: true, totalRevenue: true, isActive: true, avatar: true,
       telegramId: true, twoFactorEnabled: true, phone: true,
       createdAt: true,

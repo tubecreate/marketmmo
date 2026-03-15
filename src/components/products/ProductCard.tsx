@@ -8,6 +8,7 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import BoltIcon from '@mui/icons-material/Bolt';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import IconButton from '@mui/material/IconButton';
+import { Shield } from 'lucide-react';
 
 export interface ProductCardProps {
   id: string;
@@ -25,6 +26,7 @@ export interface ProductCardProps {
     isVerified?: boolean;
     isOnline?: boolean;
     lastActive?: string;
+    insuranceBalance?: number;
   };
   viewCount: number;
   soldCount: number;
@@ -72,7 +74,7 @@ function getCategoryBgColor(categoryLabel?: string): string {
 export default function ProductCard({
   title, slug, price, thumbnail, type, categoryLabel,
   soldCount, rating, isSponsored, shortDescription, status,
-  isService, allowBidding
+  isService, allowBidding, seller
 }: ProductCardProps) {
   const isDigital = type === 'DIGITAL';
   const emoji = getCategoryEmoji(categoryLabel);
@@ -145,12 +147,27 @@ export default function ProductCard({
 
           {/* Badges Overlay */}
           <Box sx={{ position: 'absolute', bottom: 8, left: 8, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {isSponsored && (
-              <Box sx={{ bgcolor: '#f59e0b', color: 'white', fontSize: '0.6rem', fontWeight: 800, px: 0.8, py: 0.3, borderRadius: '4px', textTransform: 'uppercase' }}>GIẢM GIÁ</Box>
+            {categoryLabel && (
+              <Box sx={{ 
+                bgcolor: '#0f172a', color: 'white', fontSize: '0.6rem', fontWeight: 800, px: 1, py: 0.4, borderRadius: '6px', 
+                textTransform: 'uppercase', border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+              }}>
+                {categoryLabel}
+              </Box>
             )}
-            <Box sx={{ bgcolor: '#0ea5e9', color: 'white', fontSize: '0.6rem', fontWeight: 800, px: 0.8, py: 0.3, borderRadius: '4px', display: 'flex', alignItems: 'center', gap: 0.3, textTransform: 'uppercase' }}>
-              <BoltIcon sx={{ fontSize: 10 }} /> GIAO NHANH
-            </Box>
+            {seller.insuranceBalance !== undefined && seller.insuranceBalance > 0 && (
+              <Box sx={{ 
+                bgcolor: '#fbbf24', color: '#000', fontSize: '0.65rem', fontWeight: 900, px: 1, py: 0.5, borderRadius: '6px', 
+                display: 'flex', alignItems: 'center', gap: 0.5, textTransform: 'uppercase',
+                border: '1px solid rgba(0,0,0,0.1)',
+                boxShadow: '0 4px 8px rgba(251, 191, 36, 0.4)',
+                animation: 'pulse-glow 2s infinite'
+              }}>
+                <Shield size={12} fill="currentColor" />
+                BH {formatPrice(seller.insuranceBalance)}
+              </Box>
+            )}
           </Box>
 
           {/* Closed Overlay */}
@@ -217,7 +234,7 @@ export default function ProductCard({
           {/* Price Section */}
           <Box sx={{ mt: 'auto' }}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-              {isService && allowBidding ? (
+              {(isService && allowBidding) || price === 0 ? (
                 <Typography sx={{ fontWeight: 800, color: '#ef4444', fontSize: '1.25rem' }}>
                   Thỏa thuận
                 </Typography>

@@ -22,6 +22,7 @@ export async function GET(
         level: true,
         isActive: true,
         createdAt: true,
+        insuranceBalance: true,
         _count: {
           select: {
             sellerOrders: true,

@@ -21,9 +21,10 @@ export async function GET(req: Request) {
   const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: { seller: { select: { username: true, isActive: true } }, category: { select: { name: true, slug: true } } },
+      include: { seller: { select: { username: true, isActive: true, insuranceBalance: true } }, category: { select: { name: true, slug: true } } },
       orderBy: [
         { isSponsored: 'desc' },
+        { seller: { insuranceBalance: 'desc' } },
         { lastSoldAt: 'desc' },
         { createdAt: 'desc' }
       ],

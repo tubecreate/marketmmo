@@ -13,6 +13,7 @@ model User {
   passwordHash     String
   balance          Float             @default(0)
   holdBalance      Float             @default(0)
+  insuranceBalance Float             @default(0)
   role             String            @default("BUYER")
   telegramId       String?
   twoFactorSecret  String?

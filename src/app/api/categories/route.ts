@@ -5,7 +5,17 @@ export async function GET() {
   try {
     const categories = await prisma.category.findMany({
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, slug: true, parentId: true },
+      select: { 
+        id: true, 
+        name: true, 
+        slug: true, 
+        parentId: true,
+        _count: {
+          select: {
+            products: { where: { status: 'ACTIVE' } }
+          }
+        }
+      },
     });
     return NextResponse.json({ categories });
   } catch {
