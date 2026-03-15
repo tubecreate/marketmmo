@@ -102,7 +102,7 @@ export default function OrdersPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [targetChatUser, setTargetChatUser] = useState<{ id: string; username: string; avatar?: string | null } | null>(null);
 
-  const handleOpenChat = (seller: any) => {
+  const handleOpenChat = (seller: { id: string; username: string }) => {
     if (!seller?.id) return;
     setTargetChatUser({ id: seller.id, username: seller.username, avatar: null });
     setChatOpen(true);
@@ -304,7 +304,7 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleOrderUpdate = (data: any) => {
+    const handleOrderUpdate = (data: { orderId?: string; status?: string }) => {
       console.log('Real-time order update (buyer) received:', data);
       fetchOrders(); // Refresh order list
       refreshUser(); // Refresh balance too if needed
@@ -437,7 +437,11 @@ export default function OrdersPage() {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
                     <Box sx={{ flex: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                        <Typography variant="body1" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                        <Typography 
+                          variant="body1" 
+                          onClick={() => router.push(`/tai-khoan/don-hang/${order.id}`)}
+                          sx={{ fontWeight: 700, color: '#1e293b', cursor: 'pointer', '&:hover': { color: '#16a34a', textDecoration: 'underline' } }}
+                        >
                           {order.product?.title ?? 'Gian hàng'} {order.variantName && order.variantName !== 'Kho chung' ? ` - ${order.variantName}` : ''}
                         </Typography>
                         <Chip size="small" label={order.product?.isService ? 'DỊCH VỤ' : 'SẢN PHẨM SỐ'} color={order.product?.isService ? 'warning' : 'success'} sx={{ borderRadius: 1, fontSize: '0.6rem', fontWeight: 800, height: 20 }} />
@@ -451,7 +455,14 @@ export default function OrdersPage() {
                         )}
                       </Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        Mã đơn: #{order.id.slice(-8).toUpperCase()} · Người bán:{' '}
+                        Mã đơn:{' '}
+                        <Box component="span" 
+                          onClick={() => router.push(`/tai-khoan/don-hang/${order.id}`)}
+                          sx={{ fontWeight: 700, color: '#16a34a', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                        >
+                          #{order.id.toUpperCase()}
+                        </Box>
+                        {' '}· Người bán:{' '}
                         <Box component="span" 
                           onClick={(e: React.MouseEvent) => { 
                             e.stopPropagation(); 
@@ -658,10 +669,17 @@ export default function OrdersPage() {
 
                       <Button 
                         size="small" variant="outlined" startIcon={<ForumIcon />}
-                        onClick={() => handleOpenChat(order.seller)}
+                        onClick={() => order.seller && handleOpenChat(order.seller)}
                         sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700 }}
                       >
                         Chat với người bán
+                      </Button>
+                      <Button 
+                        size="small" variant="outlined"
+                        onClick={() => router.push(`/tai-khoan/don-hang/${order.id}`)}
+                        sx={{ borderRadius: 1.5, fontSize: '0.75rem', fontWeight: 700, color: '#16a34a', borderColor: '#16a34a', '&:hover': { bgcolor: '#f0fdf4' } }}
+                      >
+                        Xem chi tiết
                       </Button>
                     </Box>
                     
@@ -728,7 +746,7 @@ export default function OrdersPage() {
         <DialogTitle sx={{ fontWeight: 800 }}>
           Gửi Khiếu Nại
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Đơn hàng: <strong>{disputeOrder?.id?.slice(-8).toUpperCase()}</strong>
+            Đơn hàng: <strong>{disputeOrder?.id?.toUpperCase()}</strong>
             <br />
             Sản phẩm: {disputeOrder?.product?.title} {disputeOrder?.variantName && disputeOrder.variantName !== 'Kho chung' ? `- ${disputeOrder.variantName}` : ''}
           </Typography>

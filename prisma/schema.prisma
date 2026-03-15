@@ -152,6 +152,7 @@ model Order {
   startedAt               DateTime?
   negotiatedDeliveryHours Int?
   pendingExtensionHours   Int?
+  buyerNote               String?
   dispute                 Dispute?
   buyer                   User            @relation("BuyerOrders", fields: [buyerId], references: [id])
   seller                  User            @relation("SellerOrders", fields: [sellerId], references: [id])

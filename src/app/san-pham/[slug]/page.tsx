@@ -36,10 +36,11 @@ export default function ProductDetailPage() {
     id: string; title: string; price: number; type: string; isService: boolean;
     deliveryTimeHours?: number; thumbnail?: string; status: string;
     description?: string; shortDescription?: string; rating?: number;
+    soldCount?: number;
     allowBidding?: boolean;
     seller?: { id: string; username: string; avatar?: string; isActive: boolean; insuranceBalance: number };
     _count?: { orders: number; items: number };
-    category?: { name: string };
+    category?: { name: string; slug: string };
   } | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +53,9 @@ export default function ProductDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedVar, setSelectedVar] = useState<Variant | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [expectedDays, setExpectedDays] = useState(7);
+  const [discountCode, setDiscountCode] = useState('');
+  const [buyerNote, setBuyerNote] = useState('');
   const [loginOpen, setLoginOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -91,19 +95,26 @@ export default function ProductDetailPage() {
   }, [params.slug, router]);
 
   const handleBuy = async () => {
-    if (!user || !product || !selectedVar) return;
+    if (!user || !product) return;
+    // If there are variants, one must be selected. If not, we can proceed.
+    if (variants.length > 0 && !selectedVar) {
+      toast.error('Vui lòng chọn một tùy chọn');
+      return;
+    }
     setBuying(true);
     setBuyError('');
     try {
-      const uid = user.id;
       const res = await fetch('/api/orders/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          buyerId: uid,
-          productId: product.id as string,
-          variantId: selectedVar.id,
+          buyerId: user.id,
+          productId: product.id,
+          variantId: selectedVar?.id || null,
           quantity,
+          expectedDays: product.isService ? expectedDays : undefined,
+          couponCode: discountCode,
+          buyerNote: buyerNote
         }),
       });
       const data = await res.json();
@@ -169,12 +180,16 @@ export default function ProductDetailPage() {
 
   return (
     <SiteLayout>
-      <Box sx={{ bgcolor: '#f8fafc', py: 2, borderBottom: '1px solid #e2e8f0' }}>
+      <Box sx={{ bgcolor: '#f4f4f4', py: 1.5, borderBottom: '1px solid #e5e5e5' }}>
         <Container maxWidth="lg">
-          <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-            <MuiLink component={Link} href="/" color="inherit" sx={{ fontSize: '0.875rem' }}>Trang chủ</MuiLink>
-            <MuiLink component={Link} href="/san-pham" color="inherit" sx={{ fontSize: '0.875rem' }}>{(product.category as Record<string,string>)?.name || 'Gian hàng'}</MuiLink>
-            <Typography color="text.primary" sx={{ fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase' }}>{String(product.title || '')}</Typography>
+          <Breadcrumbs separator={<NavigateNextIcon sx={{ fontSize: 16, color: '#999' }} />} sx={{ fontSize: '0.75rem' }}>
+            <MuiLink component={Link} href="/" color="inherit" underline="hover">Trang chủ</MuiLink>
+            {product.category && (
+              <MuiLink component={Link} href={`/danh-muc/${(product.category as any).slug || ''}`} color="inherit" underline="hover">
+                {product.category.name}
+              </MuiLink>
+            )}
+            <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#333' }}>{product.title}</Typography>
           </Breadcrumbs>
         </Container>
       </Box>
@@ -185,15 +200,35 @@ export default function ProductDetailPage() {
           <Grid size={{ xs: 12, md: 4.5 }}>
             <Box sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', border: '1px solid #e2e8f0', bgcolor: 'white', mb: 2 }}>
               {/* Removed KHO MARKETMMO tag as requested */}
-              <Box sx={{ position: 'relative', width: '100%', paddingTop: '100%', bgcolor: '#1e293b' }}>
-                {product.thumbnail ? (
-                  <Box component="img" src={product.thumbnail as string} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '6rem' }}>
+                <Box sx={{ position: 'relative', width: '100%', paddingTop: '100%', bgcolor: '#f1f5f9' }}>
+                  {product.thumbnail ? (
+                    <Box 
+                      component="img" 
+                      src={product.thumbnail as string} 
+                      onError={(e: any) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                      sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                  ) : null}
+                  <Box 
+                    sx={{ 
+                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                      display: product.thumbnail ? 'none' : 'flex', 
+                      alignItems: 'center', justifyContent: 'center', 
+                      fontSize: '6rem', bgcolor: '#f8fafc', color: '#cbd5e1'
+                    }}
+                  >
                     📦
                   </Box>
-                )}
-                <IconButton onClick={() => setIsFavorite(!isFavorite)}
+                  <Box sx={{ 
+                    position: 'absolute', top: 12, left: 12, 
+                    bgcolor: 'rgba(0,0,0,0.85)', color: 'white', 
+                    px: 1.5, py: 0.5, borderRadius: 1.5,
+                    fontSize: '0.65rem', fontWeight: 800,
+                    letterSpacing: '0.05em', zIndex: 5
+                  }}>
+                    KHO SHOPMINI
+                  </Box>
+                  <IconButton onClick={() => setIsFavorite(!isFavorite)}
                   sx={{ position: 'absolute', top: 12, right: 12, bgcolor: 'rgba(255,255,255,0.9)', zIndex: 3, '&:hover': { bgcolor: 'white' } }}
                 >
                   {isFavorite ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon sx={{ color: '#64748b' }} />}
@@ -248,30 +283,36 @@ export default function ProductDetailPage() {
                 )}
               </Box>
 
-              <Typography variant="h5" sx={{ fontWeight: 800, color: '#0f172a', mb: 2, textTransform: 'uppercase', lineHeight: 1.4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: '#ff8a00', mb: 1.5 }}>
                 {String(product.title || '')}
               </Typography>
 
               {/* Price — shows selected variant price or "Thoả thuận" */}
-              <Typography variant="h4" sx={{ fontWeight: 800, color: (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '#ef4444' : '#16a34a', mb: 2 }}>
+              <Typography variant="h4" sx={{ fontWeight: 900, color: '#ff0000', mb: 3 }}>
                 {(product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? 'Thỏa thuận' : `${displayPrice.toLocaleString('vi-VN')} VNĐ`}
               </Typography>
 
               {/* Stats row */}
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 1.5, fontSize: '0.85rem', color: '#64748b' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', color: '#f59e0b', gap: 0.5 }}>
-                  <Rating value={Number(product.rating) || 0} precision={0.5} readOnly size="small" sx={{ color: '#f59e0b' }} />
-                  <Typography component="span" sx={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
-                    ({product._count?.orders || 0} đánh giá)
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 1.5, pb: 2, borderBottom: '1px solid #eee', fontSize: '0.85rem' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', color: '#ffc107', gap: 0.5 }}>
+                  <Rating value={Number(product.rating) || 0} precision={0.5} readOnly size="small" sx={{ color: '#ffc107' }} />
+                  <Typography component="span" sx={{ color: '#666', fontSize: '0.85rem', fontWeight: 600 }}>
+                    ({reviews.length} đánh giá)
                   </Typography>
                 </Box>
                 <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto' }} />
-                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  Kho: <strong>{selectedVar ? selectedStock : totalStock}</strong>
-                  <SyncIcon sx={{ fontSize: 14, color: '#0ea5e9' }} />
-                </Typography>
-                <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto' }} />
+                {!product.isService && (
+                  <>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Kho: <strong>{selectedVar ? selectedStock : totalStock}</strong>
+                      <SyncIcon sx={{ fontSize: 14, color: '#0ea5e9' }} />
+                    </Typography>
+                    <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto' }} />
+                  </>
+                )}
                 <Typography variant="body2">Đã bán: <strong>{product.soldCount as number}</strong></Typography>
+                <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto' }} />
+                <Typography variant="body2">Khiếu nại: <strong style={{ color: '#00b894' }}>0.0%</strong></Typography>
               </Box>
 
               {product.shortDescription && (
@@ -286,7 +327,7 @@ export default function ProductDetailPage() {
                 <Typography variant="body2" color="text.secondary">Người bán:</Typography>
                 <Chip
                   icon={<ChatIcon sx={{ fontSize: '14px !important', color: '#16a34a' }} />}
-                  label={(product.seller as Record<string, string>)?.username}
+                  label={product.seller?.username || 'Seller'}
                   size="small"
                   onClick={handleSellerChat}
                   sx={{ 
@@ -298,11 +339,11 @@ export default function ProductDetailPage() {
                     '& .MuiChip-label': { px: 0.5 } 
                   }}
                 />
-                <Typography variant="caption" color="text.secondary">• {(product.seller as Record<string, boolean>)?.isActive ? 'Online ngay lúc này' : 'Offline'}</Typography>
+                <Typography variant="caption" color="text.secondary">• {product.seller?.isActive ? 'Online ngay lúc này' : 'Offline'}</Typography>
                 <Divider orientation="vertical" flexItem sx={{ height: 16, my: 'auto', display: { xs: 'none', sm: 'block' } }} />
                 <Button
                   component={Link}
-                  href={`/shop/${(product.seller as Record<string, string>)?.username}`}
+                  href={`/shop/${product.seller?.username || ''}`}
                   size="small"
                   variant="outlined"
                   startIcon={<StorefrontIcon sx={{ fontSize: '16px !important' }} />}
@@ -321,7 +362,7 @@ export default function ProductDetailPage() {
                 >
                   Xem Shop
                 </Button>
-                {product.seller?.insuranceBalance > 0 && (
+                {product.seller && product.seller.insuranceBalance > 0 && (
                   <Chip
                     icon={<Shield size={14} fill="#eab308" color="#eab308" />}
                     label={`BẢO HIỂM: ${product.seller.insuranceBalance.toLocaleString('vi-VN')}đ`}
@@ -343,48 +384,40 @@ export default function ProductDetailPage() {
               {/* ── VARIANTS ── */}
               {variants.length > 0 && (
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#64748b', mb: 1.5, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '.08em' }}>
-                    Chọn sản phẩm
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
                     {variants.map(v => {
                       const stock = v._count?.items ?? 0;
                       const isSelected = selectedVar?.id === v.id;
-                      const outOfStock = stock === 0;
+                      const durationDays = v.deliveryTimeHours ? Math.ceil(v.deliveryTimeHours / 24) : null;
+                      
                       return (
                         <Box
                           key={v.id}
                           onClick={() => { setSelectedVar(v); setQuantity(1); }}
                           sx={{
-                            p: 1.5, border: '1px solid',
-                            borderColor: isSelected ? '#16a34a' : outOfStock ? '#e2e8f0' : '#e2e8f0',
-                            bgcolor: isSelected ? '#f0fdf4' : 'white',
+                            p: '10px 16px', border: '1.5px solid',
+                            borderColor: isSelected ? '#ffc107' : '#e0e0e0',
+                            bgcolor: isSelected ? '#fff9c4' : '#f5f5f5',
                             borderRadius: 1,
                             cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            '&:hover': { borderColor: '#16a34a', bgcolor: '#f0fdf4' },
-                            position: 'relative'
+                            display: 'flex', alignItems: 'center', gap: 1,
+                            transition: 'all 0.2s',
+                            '&:hover': { borderColor: '#ffc107', bgcolor: '#fffde7' }
                           }}
                         >
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 700, color: isSelected ? '#166534' : '#475569', textTransform: 'uppercase' }}>
-                              {v.name}
-                            </Typography>
-                            {v.description && (
-                              <Typography variant="caption" color="text.secondary">{v.description}</Typography>
-                            )}
-                          </Box>
-                          <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 2 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: (product.isService && (product.allowBidding || v.allowBidding)) ? '#ea580c' : '#15803d' }}>
-                              {(product.isService && (product.allowBidding || v.allowBidding)) ? 'Thoả thuận' : `${v.price.toLocaleString('vi-VN')}đ`}
-                            </Typography>
-                            {!(product.isService && (product.allowBidding || v.allowBidding)) && (
-                              <Typography variant="caption" sx={{ color: stock > 0 ? '#16a34a' : '#ea580c', fontWeight: 600 }}>
-                                {stock > 0 ? `${stock} còn lại` : '⏳ Đặt trước'}
-                              </Typography>
-                            )}
-                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8rem', color: '#333' }}>
+                            {v.name.toUpperCase()}
+                          </Typography>
+                          {durationDays && (
+                            <Box sx={{ 
+                              display: 'flex', alignItems: 'center', gap: 0.3, 
+                              bgcolor: isSelected ? '#333' : '#a0aec0', 
+                              color: 'white', px: 0.8, py: 0.2, 
+                              borderRadius: 1, fontSize: '0.7rem', fontWeight: 700 
+                            }}>
+                              <Shield size={10} fill="white" /> {durationDays} Ngày
+                            </Box>
+                          )}
                         </Box>
                       );
                     })}
@@ -392,24 +425,49 @@ export default function ProductDetailPage() {
                 </Box>
               )}
 
-              {/* Quantity (Hidden if Bidding is enabled) */}
-              {!(product.isService && (product.allowBidding || selectedVar?.allowBidding)) && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>SỐ LƯỢNG</Typography>
-                  <Box sx={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: 1, overflow: 'hidden' }}>
-                    <Button onClick={() => handleQtyChange('sub')} sx={{ minWidth: 40, p: 0, color: '#475569', bgcolor: '#f8fafc', borderRadius: 0 }}>-</Button>
-                    <Box sx={{ width: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: '1px solid #cbd5e1', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>
-                      {quantity}
+              {/* Quantity & Expected Days */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, sm: product.isService ? 6 : 12 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#333', fontSize: '0.85rem' }}>SỐ LƯỢNG</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: 1, bgcolor: '#f5f5f5' }}>
+                      <IconButton size="small" onClick={() => handleQtyChange('sub')} sx={{ borderRadius: 0, px: 1.5 }}>-</IconButton>
+                      <Box sx={{ width: 40, textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc' }}>
+                        {quantity}
+                      </Box>
+                      <IconButton size="small" onClick={() => handleQtyChange('add')} sx={{ borderRadius: 0, px: 1.5 }}>+</IconButton>
                     </Box>
-                    <Button onClick={() => handleQtyChange('add')} sx={{ minWidth: 40, p: 0, color: '#475569', bgcolor: '#f8fafc', borderRadius: 0 }}>+</Button>
                   </Box>
-                  {selectedVar && (
-                    <Typography variant="body2" color="text.secondary">
-                      Tổng: <strong style={{ color: '#16a34a' }}>{(selectedVar.price * quantity).toLocaleString('vi-VN')}đ</strong>
-                    </Typography>
-                  )}
-                </Box>
-              )}
+                </Grid>
+                {product.isService && (
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: { sm: 'flex-end' } }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#333', fontSize: '0.85rem' }}>SỐ NGÀY HOÀN THÀNH</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: 1, bgcolor: '#f5f5f5' }}>
+                        <IconButton size="small" onClick={() => setExpectedDays(d => Math.max(1, d - 1))} sx={{ borderRadius: 0, px: 1.5 }}>-</IconButton>
+                        <Box sx={{ width: 40, textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', borderLeft: '1px solid #ccc', borderRight: '1px solid #ccc' }}>
+                          {expectedDays}
+                        </Box>
+                        <IconButton size="small" onClick={() => setExpectedDays(d => d + 1)} sx={{ borderRadius: 0, px: 1.5 }}>+</IconButton>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="HAY ĐỂ LẠI YÊU CẦU VỚI NGƯỜI BÁN TẠI ĐÂY (VÍ DỤ: LINK YOUTUBE...)"
+                  multiline
+                  rows={2}
+                  value={buyerNote}
+                  onChange={(e) => setBuyerNote(e.target.value)}
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    sx: { bgcolor: '#fffbeb', borderRadius: 1.5, border: '1px solid #fef3c7', fontWeight: 600, fontSize: '0.85rem' }
+                  }}
+                />
 
               {/* Buy CTA */}
               {product.status === 'CLOSED' && (
@@ -455,17 +513,29 @@ export default function ProductDetailPage() {
                 </>
               ) : (
                 <Button
-                  fullWidth variant="contained" size="large" onClick={handleBuy}
-                  disabled={buying || product.status === 'CLOSED'}
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  disabled={buying}
+                  onClick={handleBuy}
                   startIcon={buying ? <CircularProgress size={20} color="inherit" /> : <ShoppingCartIcon />}
                   sx={{ 
-                    bgcolor: (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '#ef4444' : (selectedStock === 0 && !product.isService ? '#1e293b' : '#16a34a'), 
-                    color: 'white', 
-                    fontWeight: 800, fontSize: '1.1rem', py: 1.5, borderRadius: 1, 
-                    '&:hover': { bgcolor: (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '#dc2626' : (selectedStock === 0 && !product.isService ? '#334155' : '#15803d') } 
+                    py: 2.5, borderRadius: 1.5, 
+                    bgcolor: '#ffc107', color: 'black',
+                    fontWeight: 900,
+                    fontSize: '1.2rem',
+                    boxShadow: '0 5px 0px #e0a800',
+                    '&:hover': {
+                      bgcolor: '#ffb300',
+                      boxShadow: '0 2px 0px #e0a800',
+                      transform: 'translateY(3px)'
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: '#f1f5f9'
+                    }
                   }}
                 >
-                  {product.status === 'CLOSED' ? 'TẠM NGƯNG' : buying ? 'ĐANG XỬ LÝ...' : (product.isService && (product.allowBidding || selectedVar?.allowBidding)) ? '💬 TẠO ĐƠN THƯƠNG LƯỢNG' : selectedStock === 0 && !product.isService ? '⏳ ĐẶT TRƯỚC NGAY' : 'MUA NGAY'}
+                  {buying ? 'ĐANG XỬ LÝ...' : 'MUA HÀNG'}
                 </Button>
               )}
             </Paper>
@@ -585,7 +655,9 @@ export default function ProductDetailPage() {
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">Sản phẩm:</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 700 }}>{orderResult?.variantName as string}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                {(orderResult?.variantName as string) || (product.isService ? 'Dịch vụ' : 'Bản lẻ')}
+              </Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">Số lượng:</Typography>

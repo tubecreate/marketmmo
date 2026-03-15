@@ -110,7 +110,7 @@ export default function SellerServiceOrdersPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { socket } = useSocket();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -119,7 +119,7 @@ export default function SellerServiceOrdersPage() {
 
   // Quick Chat
   const [chatOpen, setChatOpen] = useState(false);
-  const [targetChatUser, setTargetChatUser] = useState<any>(null);
+  const [targetChatUser, setTargetChatUser] = useState<{ id: string; username: string; avatar: string | null } | null>(null);
 
   const [bidPrice, setBidPrice] = useState('');
   const [bidDeliveryHours, setBidDeliveryHours] = useState('');
@@ -143,7 +143,7 @@ export default function SellerServiceOrdersPage() {
     color?: 'primary' | 'secondary' | 'warning' | 'error' | 'success';
   }>({ title: '', message: '', onConfirm: () => {} });
 
-  const handleOpenConfirm = (title: string, message: string, onConfirm: () => void, color: any = 'primary') => {
+  const handleOpenConfirm = (title: string, message: string, onConfirm: () => void, color: 'primary' | 'secondary' | 'warning' | 'error' | 'success' = 'primary') => {
     setConfirmConfig({ title, message, onConfirm, color });
     setConfirmOpen(true);
   };
@@ -161,7 +161,7 @@ export default function SellerServiceOrdersPage() {
       const allOrders = Array.isArray(data) ? data : [];
       
       // EXCLUSIVELY Service Orders in this page
-      const serviceOrders = allOrders.filter((o: any) => !!o.product?.isService && o.status !== 'PRE_ORDER');
+      const serviceOrders = allOrders.filter((o: Order) => !!o.product?.isService && o.status !== 'PRE_ORDER');
       setOrders(serviceOrders);
     } catch (err) {
       console.error('Fetch service orders error:', err);
@@ -190,7 +190,7 @@ export default function SellerServiceOrdersPage() {
   useEffect(() => {
     if (!socket) return;
     
-    const handleOrderUpdate = (data: any) => {
+    const handleOrderUpdate = (data: { orderId?: string; status?: string }) => {
       console.log('Real-time order update received:', data);
       fetchOrders(true); // Silent refresh
     };
@@ -444,7 +444,7 @@ export default function SellerServiceOrdersPage() {
                           )}
                           <Typography variant="body2" sx={{ fontWeight: 700 }}>{order.product?.title}</Typography>
                         </Box>
-                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>ID: {order.id.split('-')[0]}... · Khách: {order.buyer?.username}</Typography>
+                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>ID: {order.id.toUpperCase()} · Khách: {order.buyer?.username}</Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 800, color: '#16a34a' }}>
@@ -480,7 +480,7 @@ export default function SellerServiceOrdersPage() {
                           <Button 
                             variant="outlined" size="small" 
                             startIcon={<VisibilityIcon sx={{ fontSize: 14 }} />}
-                            onClick={() => handleViewDetail(order)} 
+                            onClick={() => router.push(`/ban-hang/don-hang/${order.id}`)} 
                             sx={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'none', borderRadius: 1.5, py: 0.5 }}
                           >
                             Chi tiết
@@ -498,7 +498,7 @@ export default function SellerServiceOrdersPage() {
                           {order.status === 'NEGOTIATING' && (
                             <Button 
                               variant="contained" size="small" color="warning" disableElevation
-                              onClick={() => handleViewDetail(order)}
+                              onClick={() => router.push(`/ban-hang/don-hang/${order.id}`)}
                               sx={{ fontSize: '0.65rem', py: 0.5, px: 1, fontWeight: 800, minWidth: 'fit-content', borderRadius: 1.5 }}
                             >
                               BÁO GIÁ

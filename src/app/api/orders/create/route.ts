@@ -8,7 +8,7 @@ import { broadcastToSocket } from '@/lib/socket-broadcaster';
 // Body: { buyerId, productId, variantId?, quantity }
 export async function POST(req: Request) {
   try {
-    const { buyerId, productId, variantId, quantity = 1 } = await req.json();
+    const { buyerId, productId, variantId, quantity = 1, expectedDays, couponCode, buyerNote } = await req.json();
 
     if (!buyerId || !productId) {
       return NextResponse.json({ error: 'Missing buyerId or productId' }, { status: 400 });
@@ -46,6 +46,8 @@ export async function POST(req: Request) {
             deliveredContent: null,
             variantName: variant?.name || 'Sản phẩm dịch vụ',
             variantId: variantId || null,
+            negotiatedDeliveryHours: expectedDays ? expectedDays * 24 : null,
+            couponCode: couponCode || null,
           } as any,
         });
 
@@ -111,6 +113,8 @@ export async function POST(req: Request) {
               deliveredContent: null,
               variantName: variant?.name || 'Sản phẩm dịch vụ',
               variantId: variantId || null,
+              negotiatedDeliveryHours: expectedDays ? expectedDays * 24 : null,
+              couponCode: couponCode || null,
             } as any,
           }),
           prisma.user.update({
@@ -197,6 +201,8 @@ export async function POST(req: Request) {
             deliveredContent: null,
             variantName: variant?.name || 'Kho chung',
             variantId: variantId || null,
+            negotiatedDeliveryHours: expectedDays ? expectedDays * 24 : null,
+            couponCode: couponCode || null,
           } as any,
         }),
         // Deduct from buyer's balance
@@ -273,6 +279,9 @@ export async function POST(req: Request) {
           warrantyExpire,
           variantName: variant?.name || 'Kho chung',
           variantId: variantId || null,
+          negotiatedDeliveryHours: expectedDays ? expectedDays * 24 : null,
+          couponCode: couponCode || null,
+          buyerNote: buyerNote || null,
         } as any,
       }),
       // Mark items as sold
